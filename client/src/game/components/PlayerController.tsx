@@ -122,7 +122,8 @@ const PlayerController = ({ character }: { character: string }) => {
         if (distance < 3) { // Increased range for better game feel
           // Kick direction (always toward opponent's goal)
           const kickForce = KICK_POWER * 3;
-          const kickVector = [dx * 0.2, 2, -kickForce * 0.8]; // Adjusted for better trajectory
+          // Make sure we have exactly 3 components for the vector
+          const kickVector: [number, number, number] = [dx * 0.2, 2, -kickForce * 0.8]; 
           
           applyForce(ballBody, kickVector);
           console.log("Ball kicked with force:", kickVector);
