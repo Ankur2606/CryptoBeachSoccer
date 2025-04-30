@@ -11,43 +11,35 @@ const PhysicsWorld = ({ children }: { children: React.ReactNode }) => {
   const initCompletedRef = useRef(false);
   const frameCount = useRef(0);
   
-  // Initialize physics world when component mounts
+  // Initialize physics world when component mounts - only once
   useEffect(() => {
     console.log("PhysicsWorld component mounted");
+    
+    // Prevent duplicate initialization
+    if (initCompletedRef.current) {
+      console.log("Physics init already attempted, skipping");
+      return;
+    }
+    
+    // Mark initialization as attempted to prevent loops
+    initCompletedRef.current = true;
     
     // Initialize physics directly - CANNON.js should already be loaded in GameScreen
     try {
       // Check if physics is already initialized
-      if (!world && !initCompletedRef.current) {
+      if (!world) {
         console.log("Initializing physics world");
         initPhysics();
-        initCompletedRef.current = true;
         setPhysicsReady(true);
-      } else if (world) {
+      } else {
         console.log("Physics world already initialized");
         setPhysicsReady(true);
       }
     } catch (error) {
       console.error("Error initializing physics:", error);
-      // Attempt to recover by loading CANNON.js directly as fallback
-      if (typeof window !== 'undefined' && !(window as any).CANNON) {
-        console.warn("CANNON.js not found, loading directly");
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js';
-        script.async = false;
-        
-        script.onload = () => {
-          console.log('CANNON.js loaded as fallback');
-          try {
-            initPhysics();
-            setPhysicsReady(true);
-          } catch (e) {
-            console.error("Failed to initialize physics even after loading CANNON.js:", e);
-          }
-        };
-        
-        document.head.appendChild(script);
-      }
+      setPhysicsReady(false);
+      
+      // Skip auto-loading CANNON.js - it should be loaded by GameScreen
     }
     
     // Clean up function
@@ -55,9 +47,8 @@ const PhysicsWorld = ({ children }: { children: React.ReactNode }) => {
       console.log("PhysicsWorld component unmounting");
       cleanup();
       setPhysicsReady(false);
-      initCompletedRef.current = false;
     };
-  }, [initPhysics, cleanup, world]);
+  }, []); // Empty dependency array - run only once on mount
   
   // Debug logging for physics world state
   useEffect(() => {
@@ -94,6 +85,27 @@ const PhysicsWorld = ({ children }: { children: React.ReactNode }) => {
     // Periodic logging for debugging
     if (frameCount.current % 300 === 0) {
       console.log("Physics world active, frame:", frameCount.current);
+      
+      // Every 300 frames, add a debug message to help troubleshoot
+      if (world.bodies.length > 0) {
+        // Log active bodies count for debugging
+        const dynamicBodies = world.bodies.filter((b: any) => b.mass > 0).length;
+        const staticBodies = world.bodies.filter((b: any) => b.mass === 0).length;
+        
+        console.log(`Active physics bodies: ${world.bodies.length} (${dynamicBodies} dynamic, ${staticBodies} static)`);
+        
+        // Log player position if exists
+        const playerBody = world.bodies.find((b: any) => b.userData?.id === 'player_character');
+        if (playerBody) {
+          console.log('Player position:', playerBody.position);
+        }
+        
+        // Log ball position if exists
+        const ballBody = world.bodies.find((b: any) => b.userData?.id === 'ball');
+        if (ballBody) {
+          console.log('Ball position:', ballBody.position);
+        }
+      }
     }
     
     const time = state.clock.getElapsedTime();

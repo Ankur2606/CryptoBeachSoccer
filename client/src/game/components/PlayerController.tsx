@@ -65,37 +65,40 @@ const PlayerController = ({ character }: { character: string }) => {
     if (kickCooldownRef.current > 0) kickCooldownRef.current -= delta;
     if (jumpCooldownRef.current > 0) jumpCooldownRef.current -= delta;
     
-    // Movement
-    const moveSpeed = MOVE_SPEED * 10; // Scale up for better responsiveness
+    // Movement - use stronger forces and direct velocity for very responsive movement
+    const moveSpeed = MOVE_SPEED * 15; // Scale up for better responsiveness
     direction.current.set(0, 0, 0);
     
-    // WASD and Arrow Keys for movement
-    if (keys.left) direction.current.x = -1;
-    if (keys.right) direction.current.x = 1;
+    // WASD and Arrow Keys for movement - log keys state for debugging
+    if (keys.left) {
+      direction.current.x = -1;
+      console.log("Moving left");
+    }
+    if (keys.right) {
+      direction.current.x = 1;
+      console.log("Moving right");
+    }
     
     // Check if character is on ground for jumping
     isOnGroundRef.current = playerBody.position.y < 0.6;
     
     // Apply movement force with dampening for better control
     if (direction.current.length() > 0) {
-      // Scale force by mass for consistent movement
+      // For extremely responsive movement, directly set velocity with some inertia
+      const desiredVelocity = direction.current.x * 8; // Target velocity 
+      // Blend current and desired velocity for some inertia (lower number = more responsive)
+      playerBody.velocity.x = playerBody.velocity.x * 0.3 + desiredVelocity * 0.7;
+      
+      // Also apply force for acceleration
       const force = new Vector3()
         .copy(direction.current)
         .normalize()
         .multiplyScalar(moveSpeed * playerBody.mass * delta * 60);
       
       applyForce(playerBody, [force.x, 0, 0]);
-      
-      // Apply some drag to prevent excessive speed
-      const velocity = playerBody.velocity;
-      const maxSpeed = 8;
-      
-      if (Math.abs(velocity.x) > maxSpeed) {
-        playerBody.velocity.x = Math.sign(velocity.x) * maxSpeed;
-      }
     } else {
-      // Apply damping when not pressing movement keys
-      playerBody.velocity.x *= 0.9;
+      // Apply stronger damping when not pressing movement keys
+      playerBody.velocity.x *= 0.8; // More aggressive slowdown
     }
     
     // Jump (only when on ground)

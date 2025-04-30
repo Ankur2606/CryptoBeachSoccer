@@ -28,44 +28,59 @@ export function useKeyboardControls() {
     keysRef.current = keys;
   }, [keys]);
   
-  // Event handlers
+  // Event handlers with direct access to reference for immediate updates
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     // Prevent default behavior for game controls
     if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'KeyE'].includes(event.code)) {
       event.preventDefault();
     }
     
+    // Log every keydown for debugging
+    console.log('⌨️ Key down:', event.code);
+    
     switch (event.code) {
       case 'ArrowLeft':
       case 'KeyA':
+        // Update both state and ref immediately
+        keysRef.current.left = true;
         setKeys(prev => {
-          console.log('Left key down');
+          console.log('Left key down (A or ←)');
           return { ...prev, left: true };
         });
         break;
       case 'ArrowRight':
       case 'KeyD':
+        // Update both state and ref immediately
+        keysRef.current.right = true;
         setKeys(prev => {
-          console.log('Right key down');
+          console.log('Right key down (D or →)');
           return { ...prev, right: true };
         });
         break;
       case 'ArrowUp':
       case 'KeyW':
+        // Update both state and ref immediately
+        keysRef.current.jump = true;
         setKeys(prev => {
-          console.log('Jump key down');
+          console.log('Jump key down (W or ↑)');
           return { ...prev, jump: true };
         });
         break;
       case 'Space':
+        // Update both state and ref immediately
+        keysRef.current.kick = true;
         setKeys(prev => {
-          console.log('Kick key down');
+          console.log('Kick key down (Space)');
           return { ...prev, kick: true };
         });
         break;
       case 'KeyE':
+      case 'ShiftLeft':
+      case 'ShiftRight':
+        // Update both state and ref immediately
+        keysRef.current.ability = true;
         setKeys(prev => {
-          console.log('Ability key down');
+          console.log('Ability key down (E or Shift)');
           return { ...prev, ability: true };
         });
         break;
@@ -73,23 +88,38 @@ export function useKeyboardControls() {
   }, []);
   
   const handleKeyUp = useCallback((event: KeyboardEvent) => {
+    // Log every keyup for debugging
+    console.log('⌨️ Key up:', event.code);
+    
     switch (event.code) {
       case 'ArrowLeft':
       case 'KeyA':
+        // Update both state and ref immediately
+        keysRef.current.left = false;
         setKeys(prev => ({ ...prev, left: false }));
         break;
       case 'ArrowRight':
       case 'KeyD':
+        // Update both state and ref immediately
+        keysRef.current.right = false;
         setKeys(prev => ({ ...prev, right: false }));
         break;
       case 'ArrowUp':
       case 'KeyW':
+        // Update both state and ref immediately
+        keysRef.current.jump = false;
         setKeys(prev => ({ ...prev, jump: false }));
         break;
       case 'Space':
+        // Update both state and ref immediately
+        keysRef.current.kick = false;
         setKeys(prev => ({ ...prev, kick: false }));
         break;
       case 'KeyE':
+      case 'ShiftLeft':
+      case 'ShiftRight':
+        // Update both state and ref immediately
+        keysRef.current.ability = false;
         setKeys(prev => ({ ...prev, ability: false }));
         break;
     }
