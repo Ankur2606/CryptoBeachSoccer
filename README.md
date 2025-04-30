@@ -11,7 +11,9 @@ Built with Three.js for 3D visuals and Cannon.js for physics, this game offers a
 ## 🚀 Features
 
 - **Unique Crypto Characters**: Choose from Bitcoin, Ethereum, Dogecoin, or PepeCoin
-- **Special Abilities**: Each character has unique powers based on their crypto identity
+- **3D Human Characters**: Play as Giga Chad or Beach Baddy with realistic 3D models
+- **Special Abilities**: Each character has unique powers based on their identity
+- **Orange ID Authentication**: Optional secure login via Orange ID Web3 authentication
 - **Beach Environment**: Play on a vibrant beach field complete with palm trees and sand
 - **Physics-Based Gameplay**: Realistic ball movement and character interactions
 - **Responsive Design**: Play on desktop or mobile devices
@@ -100,10 +102,31 @@ http://localhost:5173
    - Enhances ALL abilities by 80% for the ultimate crypto champion experience
    - Duration: 6 seconds
 
+5. **Giga Chad** (3D Character)
+   - **Ability: Womanizer**
+   - Makes opponents magnetically attracted to him for 3 seconds
+   - Duration: 3 seconds
+   - Special Effect: Plays sleazy whistle sound when activated
+
+6. **Beach Baddy** (3D Character)
+   - **Ability: Captivating Presence**
+   - Freezes opponents in place for 2 seconds with stunning beauty
+   - Duration: 2 seconds
+   - Special Effect: Plays freeze sound when activated
+
+### Authentication Features
+
+Crypto Beach Soccer integrates with Orange ID Web3 authentication, allowing players to:
+- Sign in with Google or Apple accounts
+- Connect their Web3 wallets (coming soon)
+- Save game progress across devices (coming soon)
+- Play as guest without signing in
+- View their Orange ID profile within the game
+
 ### Game Rules
 
 1. Matches last 3 minutes - player with most goals wins
-2. Special abilities recharge after cooldown (15 seconds)
+2. Special abilities recharge after cooldown (12-15 seconds)
 3. Power-ups appear on the field periodically (15-30 seconds)
 4. Press R to reset the ball if it gets stuck
 5. Stay within the field boundaries to maintain control
@@ -115,6 +138,7 @@ http://localhost:5173
 3. **Ball Control**: Position yourself properly before kicking to aim accurately
 4. **Field Positioning**: Don't stray too far from the center, maintain good field coverage
 5. **Jump Shots**: Use jump kicks for higher trajectories to clear opponent blocks
+6. **Character Selection**: Choose characters based on your playstyle - crypto characters for special abilities or 3D human characters for unique tactical advantages
 
 ## 🛠️ Technical Architecture
 
@@ -125,6 +149,7 @@ Crypto Beach Soccer is built with:
 - **Zustand** - State management
 - **TypeScript** - Type-safe code
 - **WebSocket** - For future multiplayer implementation
+- **Orange ID SDK** - Web3 authentication integration
 
 ## 📝 License
 
@@ -134,8 +159,9 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - Crypto community for inspiration
 - Three.js community for resources
+- Orange ID team for authentication SDK
 - All contributors and playtesters
 
 ---
 
-Made with 💖 and code | © 2025 Crypto Beach Soccer Team
+Made with 💖 and code | © 2025 Crypto Beach Soccer Team | @liebnerzeneolite

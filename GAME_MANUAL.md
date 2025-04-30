@@ -6,8 +6,9 @@
 3. [Characters & Abilities](#characters--abilities)
 4. [Gameplay Mechanics](#gameplay-mechanics)
 5. [Power-ups](#power-ups)
-6. [Tips & Strategies](#tips--strategies)
-7. [Troubleshooting](#troubleshooting)
+6. [Authentication & User Profiles](#authentication--user-profiles)
+7. [Tips & Strategies](#tips--strategies)
+8. [Troubleshooting](#troubleshooting)
 
 ## Getting Started
 
@@ -19,9 +20,14 @@
 ### Main Menu Navigation
 1. Start the game and wait for the main menu to load
 2. Select "Play Game" to start a new match
-3. Choose your preferred character (Bitcoin, Ethereum, Dogecoin, or PepeCoin)
+3. Choose your preferred character (Bitcoin, Ethereum, Dogecoin, PepeCoin, Giga Chad, or Beach Baddy)
 4. Select difficulty level for the AI opponent
 5. Press "Start Match" to begin playing
+
+### Account Options
+- **Play as Guest**: Jump right into the game without signing in
+- **Sign in with Orange ID**: Use Google or Apple accounts for a personalized experience
+- **User Profile**: View your Orange ID details and account information
 
 ## Controls
 
@@ -44,7 +50,9 @@ The mobile interface displays touch controls on screen:
 
 ## Characters & Abilities
 
-### Bitcoin (BTC)
+### Cryptocurrency Characters
+
+#### Bitcoin (BTC)
 - **Character Design**: Golden coin head with male body in orange swim trunks
 - **Ability**: HODL - The Diamond Hands Upgrade
   - **Effect**: 150% increased kick power and significantly larger ball control radius
@@ -53,7 +61,7 @@ The mobile interface displays touch controls on screen:
   - **Best Used For**: Powerful shots and maintaining ball possession
   - **Visual Effect**: Golden aura surrounding player
 
-### Ethereum (ETH)
+#### Ethereum (ETH)
 - **Character Design**: Blue/purple coin head with female body in purple swimwear
 - **Ability**: Smart Contract - Gas Fee Turbocharger
   - **Effect**: 150% higher jumps and 50% speed boost
@@ -62,7 +70,7 @@ The mobile interface displays touch controls on screen:
   - **Best Used For**: Aerial maneuvers and quick field coverage
   - **Visual Effect**: Blue ethereal glow with wireframe overlay
 
-### Dogecoin (DOGE)
+#### Dogecoin (DOGE)
 - **Character Design**: Yellow/gold coin with Shiba Inu face, male body in red swimsuit
 - **Ability**: To The Moon - Lunar Gravity Edition
   - **Effect**: Temporary invincibility, 120% speed boost, and enhanced kicking
@@ -71,7 +79,7 @@ The mobile interface displays touch controls on screen:
   - **Best Used For**: Aggressive plays and breaking through defenses
   - **Visual Effect**: Yellow/gold energy trail and lighter gravity physics
 
-### PepeCoin (PEPE)
+#### PepeCoin (PEPE)
 - **Character Design**: Green coin with Pepe face, female body in green frog-patterned swimsuit
 - **Ability**: Meme Magic - The Rare Pepe Power
   - **Effect**: 80% boost to ALL stats (speed, jumping, kicking, ball control)
@@ -79,6 +87,28 @@ The mobile interface displays touch controls on screen:
   - **Cooldown**: 15 seconds
   - **Best Used For**: All-around gameplay enhancement and critical moments
   - **Visual Effect**: Green pulsing aura with meme-like visual effects
+
+### 3D Human Characters
+
+#### Giga Chad
+- **Character Design**: Muscular male 3D character in blue swim trunks
+- **Ability**: Womanizer
+  - **Effect**: Makes opponents magnetically attracted to him for 3 seconds
+  - **Duration**: 3 seconds
+  - **Cooldown**: 15 seconds
+  - **Best Used For**: Pulling opponents away from the ball or their goal
+  - **Visual Effect**: Red aura with floating heart particles
+  - **Sound Effect**: Sleazy whistle when activated
+
+#### Beach Baddy
+- **Character Design**: Stylish female 3D character in pink bikini
+- **Ability**: Captivating Presence
+  - **Effect**: Completely freezes opponents in place for 2 seconds
+  - **Duration**: 2 seconds
+  - **Cooldown**: 12 seconds
+  - **Best Used For**: Creating scoring opportunities or escaping with the ball
+  - **Visual Effect**: Pink aura with dazzling star particles
+  - **Sound Effect**: Freeze sound when activated
 
 ## Gameplay Mechanics
 
@@ -121,6 +151,33 @@ All power-ups correspond to the four character abilities:
 - Collected power-ups activate immediately for their specified duration
 - PepeCoin power-ups are rare (15% spawn chance) but offer the greatest benefits
 
+## Authentication & User Profiles
+
+### Orange ID Authentication
+Crypto Beach Soccer integrates with Orange ID for secure Web3 authentication:
+
+- **Sign in Options**:
+  - Google Account
+  - Apple ID
+  - Guest Mode (no account required)
+
+- **Benefits of Authentication**:
+  - Personalized gameplay with your name and avatar
+  - View your Orange ID profile within the game
+  - Future features: save game progress, leaderboards, achievements
+
+### User Profile
+When signed in with Orange ID, you can:
+- View your profile picture and display name
+- See your Orange ID information
+- View your Ethereum wallet address (if connected)
+- Sign out from the game
+
+### Profile Access
+- Click your profile picture in the main menu
+- Access your full profile details including connected wallet information
+- View sign-in method (Google/Apple)
+
 ## Tips & Strategies
 
 ### Offensive Strategies
@@ -157,8 +214,13 @@ All power-ups correspond to the four character abilities:
 2. Ensure no browser extensions are interfering with key inputs
 3. Try refreshing the page or restarting the game
 
+### Character-Specific Issues
+- **3D Character Models Not Displaying**: Make sure browser supports WebGL and 3D rendering
+- **Character Abilities Not Working**: Check cooldown timer in the UI
+- **Character Stuck in Ground**: Try resetting position with the R key
+
 ---
 
 Enjoy playing Crypto Beach Soccer! Remember that regular practice and understanding each character's unique abilities are key to mastering the game.
 
-© 2025 Crypto Beach Soccer Team
+© 2025 Crypto Beach Soccer Team | @liebnerzeneolite
