@@ -14,6 +14,7 @@ import Effects from '../components/Effects';
 import PlayerController from '../components/PlayerController';
 import AIController from '../components/AIController';
 import PhysicsWorld from '../components/PhysicsWorld';
+import Abilities from '../components/Abilities';
 import GameUI from '../ui/GameUI';
 import TouchControls from '../components/TouchControls';
 import { useIsMobile } from '@/hooks/use-is-mobile';
@@ -133,6 +134,9 @@ const GameScreen = () => {
             
             {/* AI controller */}
             <AIController />
+
+            {/* Crypto-themed ability pickups */}
+            <Abilities />
           </PhysicsWorld>
           
           {/* Post-processing effects */}

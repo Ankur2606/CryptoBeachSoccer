@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useKeyboardControls } from "@/lib/hooks/useKeyboardControls";
 import { usePhysics } from "@/lib/stores/usePhysics";
@@ -7,22 +7,33 @@ import { useAudio } from "@/lib/stores/useAudio";
 import { useGameState } from "@/lib/stores/useGameState";
 import { Vector3 } from "three";
 import { MOVE_SPEED, JUMP_FORCE, KICK_POWER } from "../constants";
+import { AbilityType } from "./Abilities";
 
 // Player controller handles input and character movement
 const PlayerController = ({ character }: { character: string }) => {
   const [subscribeKeys, getKeys] = useKeyboardControls();
   const { getBody, applyForce } = usePhysics();
   const { activateAbility, isAbilityActive, cooldownRemaining } = useCharacter();
-  const { playHit } = useAudio();
+  const { playHit, playSuccess } = useAudio();
   const { gameState } = useGameState();
+  
+  // Active crypto ability states
+  const [activeAbility, setActiveAbility] = useState<AbilityType | null>(null);
+  const [abilityTimeRemaining, setAbilityTimeRemaining] = useState(0);
+  
+  // Speed/jump multipliers for abilities
+  const [speedMultiplier, setSpeedMultiplier] = useState(1.0);
+  const [jumpMultiplier, setJumpMultiplier] = useState(1.0);
+  const [isInvincible, setIsInvincible] = useState(false);
   
   const kickCooldownRef = useRef(0);
   const jumpCooldownRef = useRef(0);
   const direction = useRef(new Vector3());
   const isOnGroundRef = useRef(true);
   const frameCount = useRef(0);
+  const abilityEffectRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Log when component mounts
+  // Log when component mounts and set up ability listeners
   useEffect(() => {
     console.log("PlayerController mounted for character:", character);
     
@@ -36,12 +47,80 @@ const PlayerController = ({ character }: { character: string }) => {
       window.addEventListener('keydown', handleKeyDown);
     }
     
+    // Handle ability collection event
+    const handleAbilityCollected = (event: Event) => {
+      const customEvent = event as CustomEvent<{type: AbilityType, data: any}>;
+      const abilityType = customEvent.detail.type;
+      const abilityData = customEvent.detail.data;
+      
+      console.log(`🪙 Collected ${abilityType} ability!`);
+      playSuccess();
+      
+      // Apply the ability effect
+      applyAbilityEffect(abilityType, abilityData.duration);
+    };
+    
+    // Add event listener for ability collection
+    window.addEventListener('ability-collected', handleAbilityCollected);
+    
     return () => {
       if (process.env.NODE_ENV === 'development') {
         window.removeEventListener('keydown', handleKeyDown);
       }
+      window.removeEventListener('ability-collected', handleAbilityCollected);
+      
+      // Clean up any active ability effects on unmount
+      if (abilityEffectRef.current) {
+        clearTimeout(abilityEffectRef.current);
+      }
     };
-  }, [character]);
+  }, [character, playSuccess]);
+  
+  // Apply the specific crypto ability effect
+  const applyAbilityEffect = (type: AbilityType, duration: number) => {
+    // Clear any existing effects
+    if (abilityEffectRef.current) {
+      clearTimeout(abilityEffectRef.current);
+    }
+    
+    // Set the active ability
+    setActiveAbility(type);
+    setAbilityTimeRemaining(duration);
+    
+    // Apply effects based on ability type
+    switch (type) {
+      case 'bitcoin':
+        // Bitcoin boosts speed
+        console.log("🚀 Bitcoin Boost activated! Speed increased by 50%");
+        setSpeedMultiplier(1.5);
+        break;
+      
+      case 'ethereum':
+        // Ethereum boosts jump height
+        console.log("🦘 Ethereum Energizer activated! Jump height increased by 75%");
+        setJumpMultiplier(1.75);
+        break;
+      
+      case 'dogecoin':
+        // Dogecoin gives temporary invincibility and speed
+        console.log("⚡ Dogecoin Dash activated! Temporary invincibility and speed boost");
+        setIsInvincible(true);
+        setSpeedMultiplier(1.7);
+        break;
+    }
+    
+    // Set timeout to end the effect
+    abilityEffectRef.current = setTimeout(() => {
+      console.log(`Ability ${type} effect ended`);
+      setActiveAbility(null);
+      setAbilityTimeRemaining(0);
+      setSpeedMultiplier(1.0);
+      setJumpMultiplier(1.0);
+      setIsInvincible(false);
+      
+      abilityEffectRef.current = null;
+    }, duration * 1000);
+  };
   
   // Process input and move character each frame
   useFrame((state, delta) => {
@@ -81,7 +160,19 @@ const PlayerController = ({ character }: { character: string }) => {
     if (jumpCooldownRef.current > 0) jumpCooldownRef.current -= delta;
     
     // Movement - use stronger forces and direct velocity manipulation for responsiveness
-    const moveSpeed = MOVE_SPEED * 15; // Scale up for better responsiveness
+    // Apply ability speed multiplier if active
+    const moveSpeed = MOVE_SPEED * 15 * speedMultiplier; // Scale up for better responsiveness
+    
+    // Update ability time remaining if active
+    if (activeAbility) {
+      setAbilityTimeRemaining(prev => Math.max(0, prev - delta));
+      
+      // Visual indicator for active ability (log occasionally)
+      if (frameCount.current % 30 === 0) {
+        console.log(`${activeAbility.toUpperCase()} ability active for ${abilityTimeRemaining.toFixed(1)}s`);
+      }
+    }
+    
     direction.current.set(0, 0, 0);
     
     // MOVEMENT: WASD or Arrow Keys
@@ -151,10 +242,17 @@ const PlayerController = ({ character }: { character: string }) => {
     // Separate the jump logic from forward movement
     // Jump (only when on ground and W/Up is pressed)
     if (keys.jump && isOnGroundRef.current && jumpCooldownRef.current <= 0) {
-      const jumpForce = JUMP_FORCE * 20 * playerBody.mass; // Scale for better jump
+      // Apply jump multiplier from ability if active
+      const jumpForce = JUMP_FORCE * 20 * playerBody.mass * jumpMultiplier; // Scale for better jump
       applyForce(playerBody, [0, jumpForce, 0]);
       jumpCooldownRef.current = 0.3; // Shorter cooldown for responsive jumps
-      console.log("Jump applied", jumpForce);
+      
+      // Log jump with different message if enhanced by ability
+      if (jumpMultiplier > 1.0) {
+        console.log(`💫 Enhanced jump applied with force ${jumpForce.toFixed(1)} (${Math.round((jumpMultiplier-1)*100)}% boost)`);
+      } else {
+        console.log("Jump applied", jumpForce);
+      }
     }
     
     // Display key mapping info occasionally for debugging
@@ -254,6 +352,38 @@ const PlayerController = ({ character }: { character: string }) => {
       playerBody.velocity.set(0, 0, 0);
     }
   });
+  
+  // Return visual effects for active abilities
+  if (activeAbility) {
+    return (
+      <group>
+        {/* Visual effect for active ability */}
+        {activeAbility === 'bitcoin' && (
+          <mesh position={[0, 1.5, 0]}>
+            <sphereGeometry args={[1.2, 16, 16]} />
+            <meshBasicMaterial color="#f7931a" transparent opacity={0.2} />
+          </mesh>
+        )}
+        
+        {activeAbility === 'ethereum' && (
+          <mesh position={[0, 1.5, 0]}>
+            <sphereGeometry args={[1.2, 16, 16]} />
+            <meshBasicMaterial color="#627eea" transparent opacity={0.2} />
+          </mesh>
+        )}
+        
+        {activeAbility === 'dogecoin' && (
+          <>
+            <mesh position={[0, 1.5, 0]}>
+              <sphereGeometry args={[1.2, 16, 16]} />
+              <meshBasicMaterial color="#c3a634" transparent opacity={0.3} />
+            </mesh>
+            <pointLight position={[0, 1, 0]} intensity={2} distance={3} color="#c3a634" />
+          </>
+        )}
+      </group>
+    );
+  }
   
   return null;
 };
