@@ -1,0 +1,324 @@
+import { create } from 'zustand';
+import { subscribeWithSelector } from 'zustand/middleware';
+
+// Physics body types
+type BodyShape = 'box' | 'sphere' | 'plane' | 'cylinder' | 'capsule';
+type BodyType = 'dynamic' | 'static';
+
+interface BodyOptions {
+  position: [number, number, number];
+  velocity?: [number, number, number];
+  mass?: number;
+  type?: BodyType;
+  shape: BodyShape;
+  width?: number;
+  height?: number;
+  depth?: number;
+  radius?: number;
+  fixedRotation?: boolean;
+  linearDamping?: number;
+  angularDamping?: number;
+  material?: {
+    friction?: number;
+    restitution?: number;
+  };
+  rotation?: [number, number, number];
+  isTrigger?: boolean;
+  userData?: any;
+  onCollide?: (body: any) => void;
+}
+
+interface PhysicsStore {
+  // State
+  world: any; // Will hold CANNON.World
+  bodies: Record<string, any>; // Will hold CANNON.Body instances by ID
+  
+  // Actions
+  initPhysics: () => void;
+  updatePhysics: (delta: number) => void;
+  addBody: (options: BodyOptions) => any;
+  removeBody: (bodyId: string) => void;
+  getBody: (bodyId: string) => any;
+  applyForce: (body: any, force: [number, number, number], point?: [number, number, number]) => void;
+  
+  // Cleanup
+  cleanup: () => void;
+}
+
+export const usePhysics = create<PhysicsStore>()(
+  subscribeWithSelector((set, get) => ({
+    // Initial state
+    world: null,
+    bodies: {},
+    
+    // Initialize physics world
+    initPhysics: () => {
+      // Check if CANNON is available (from CDN)
+      if (typeof window === 'undefined' || !(window as any).CANNON) {
+        console.error('CANNON.js not available');
+        return;
+      }
+      
+      const CANNON = (window as any).CANNON;
+      
+      // Create a new world
+      const world = new CANNON.World();
+      world.gravity.set(0, -9.81, 0); // Set gravity
+      world.broadphase = new CANNON.NaiveBroadphase();
+      world.solver.iterations = 10;
+      
+      // Store world reference
+      set({ world });
+      
+      // Make world available globally for debugging
+      (window as any).CANNON = CANNON;
+      (window as any).physicsWorld = world;
+    },
+    
+    // Update physics simulation
+    updatePhysics: (delta) => {
+      const { world } = get();
+      
+      if (world) {
+        // Step the physics world
+        world.step(1/60, delta, 3);
+        
+        // Handle collisions
+        handleCollisions(world);
+      }
+    },
+    
+    // Add a physics body to the world
+    addBody: (options) => {
+      const { world } = get();
+      
+      if (!world) {
+        console.error('Physics world not initialized');
+        return null;
+      }
+      
+      const CANNON = (window as any).CANNON;
+      
+      // Create the shape based on type
+      let shape;
+      switch (options.shape) {
+        case 'box':
+          shape = new CANNON.Box(new CANNON.Vec3(
+            options.width ? options.width / 2 : 0.5,
+            options.height ? options.height / 2 : 0.5,
+            options.depth ? options.depth / 2 : 0.5
+          ));
+          break;
+        case 'sphere':
+          shape = new CANNON.Sphere(options.radius || 0.5);
+          break;
+        case 'plane':
+          shape = new CANNON.Plane();
+          break;
+        case 'cylinder':
+          shape = new CANNON.Cylinder(
+            options.radius || 0.5,
+            options.radius || 0.5,
+            options.height || 1,
+            16
+          );
+          break;
+        case 'capsule':
+          // Capsule is not built-in, approximate with cylinder and spheres
+          const radius = options.radius || 0.5;
+          const height = options.height || 1;
+          const cylinderHeight = height - radius * 2;
+          
+          // Create compound shape
+          shape = new CANNON.Compound();
+          
+          // Cylinder for middle
+          const cylinderShape = new CANNON.Cylinder(radius, radius, cylinderHeight, 16);
+          shape.addChild(
+            cylinderShape,
+            new CANNON.Vec3(0, 0, 0)
+          );
+          
+          // Spheres for ends
+          const sphereShape = new CANNON.Sphere(radius);
+          shape.addChild(
+            sphereShape,
+            new CANNON.Vec3(0, cylinderHeight / 2, 0)
+          );
+          shape.addChild(
+            sphereShape,
+            new CANNON.Vec3(0, -cylinderHeight / 2, 0)
+          );
+          break;
+        default:
+          shape = new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5));
+      }
+      
+      // Create body
+      const bodyOptions: any = {
+        mass: options.type === 'static' ? 0 : (options.mass || 1),
+        position: new CANNON.Vec3(...options.position),
+        shape,
+      };
+      
+      // Add velocity if specified
+      if (options.velocity) {
+        bodyOptions.velocity = new CANNON.Vec3(...options.velocity);
+      }
+      
+      // Add fixed rotation if specified
+      if (options.fixedRotation) {
+        bodyOptions.fixedRotation = options.fixedRotation;
+      }
+      
+      // Add damping if specified
+      if (options.linearDamping) {
+        bodyOptions.linearDamping = options.linearDamping;
+      }
+      
+      if (options.angularDamping) {
+        bodyOptions.angularDamping = options.angularDamping;
+      }
+      
+      // Create the physics body
+      const body = new CANNON.Body(bodyOptions);
+      
+      // Set material properties if specified
+      if (options.material) {
+        const material = new CANNON.Material();
+        
+        if (options.material.friction !== undefined) {
+          material.friction = options.material.friction;
+        }
+        
+        if (options.material.restitution !== undefined) {
+          material.restitution = options.material.restitution;
+        }
+        
+        body.material = material;
+      }
+      
+      // Set trigger property if specified
+      if (options.isTrigger) {
+        body.collisionResponse = false;
+      }
+      
+      // Set rotation if specified
+      if (options.rotation) {
+        body.quaternion.setFromEuler(
+          options.rotation[0],
+          options.rotation[1],
+          options.rotation[2],
+          'XYZ'
+        );
+      }
+      
+      // Attach userData
+      body.userData = options.userData || {};
+      
+      // Attach collision callback if specified
+      if (options.onCollide) {
+        body.userData.onCollide = options.onCollide;
+      }
+      
+      // Add body to world
+      world.addBody(body);
+      
+      // Store body in bodies map if it has an ID
+      if (options.userData?.bodyId) {
+        set((state) => ({
+          bodies: {
+            ...state.bodies,
+            [options.userData.bodyId]: body
+          }
+        }));
+      }
+      
+      return body;
+    },
+    
+    // Remove a physics body from the world
+    removeBody: (bodyId) => {
+      const { world, bodies } = get();
+      
+      if (!world) return;
+      
+      // Find the body
+      const body = bodies[bodyId];
+      
+      if (body) {
+        // Remove from world
+        world.removeBody(body);
+        
+        // Remove from bodies map
+        set((state) => {
+          const newBodies = { ...state.bodies };
+          delete newBodies[bodyId];
+          return { bodies: newBodies };
+        });
+      }
+    },
+    
+    // Get a physics body by ID
+    getBody: (bodyId) => {
+      const { bodies } = get();
+      return bodies[bodyId] || null;
+    },
+    
+    // Apply force to a body
+    applyForce: (body, force, point) => {
+      if (!body) return;
+      
+      const CANNON = (window as any).CANNON;
+      
+      // Create force vector
+      const forceVec = new CANNON.Vec3(...force);
+      
+      // Apply force at point or center of mass
+      if (point) {
+        const pointVec = new CANNON.Vec3(...point);
+        body.applyForce(forceVec, pointVec);
+      } else {
+        body.applyForce(forceVec, body.position);
+      }
+    },
+    
+    // Cleanup physics world
+    cleanup: () => {
+      const { world } = get();
+      
+      if (world) {
+        // Remove all bodies from world
+        while (world.bodies.length > 0) {
+          world.removeBody(world.bodies[0]);
+        }
+      }
+      
+      set({ world: null, bodies: {} });
+    }
+  }))
+);
+
+// Helper function to handle collisions
+function handleCollisions(world: any) {
+  // Get all active collision pairs
+  const contacts = world.contacts;
+  
+  // Loop through contacts
+  for (let i = 0; i < contacts.length; i++) {
+    const contact = contacts[i];
+    
+    // Get the two bodies involved
+    const bodyA = contact.bi;
+    const bodyB = contact.bj;
+    
+    // If either body has a collision callback, call it
+    if (bodyA.userData?.onCollide) {
+      bodyA.userData.onCollide(bodyB);
+    }
+    
+    if (bodyB.userData?.onCollide) {
+      bodyB.userData.onCollide(bodyA);
+    }
+  }
+}
