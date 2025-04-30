@@ -159,6 +159,27 @@ const Character = ({
             roughness={0.2}
           />
           
+          {/* Floating Crypto Coin above head */}
+          <group position={[0, 0.7, 0]} rotation={[0, 0, 0]}>
+            {/* Animated floating coin */}
+            <mesh castShadow position={[0, Math.sin(Date.now() * 0.003) * 0.1, 0]}>
+              <cylinderGeometry args={[0.4, 0.4, 0.05, 32]} />
+              <meshStandardMaterial 
+                color={characterId === 'bitcoin' ? '#f7931a' : 
+                      characterId === 'ethereum' ? '#627eea' :
+                      characterId === 'dogecoin' ? '#c3a634' :
+                      '#44be5a'} 
+                metalness={0.9}
+                roughness={0.1}
+                emissive={characterId === 'bitcoin' ? '#f7931a' : 
+                        characterId === 'ethereum' ? '#627eea' :
+                        characterId === 'dogecoin' ? '#c3a634' :
+                        '#44be5a'}
+                emissiveIntensity={0.2}
+              />
+            </mesh>
+          </group>
+          
           {/* Character symbol */}
           <Html position={[0, 0, 0.11]} transform occlude>
             <div style={{ 

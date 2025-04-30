@@ -1,0 +1,61 @@
+Prompt for AI Agent: Enhance "Crypto Beach Soccer"
+Enhance the game "Crypto Beach Soccer" with the following improvements, ensuring compatibility with the existing structure and libraries (Three.js and Cannon.js):
+1. Ball Physics and Bounding Boxes
+
+Issue: The ball's bounding boxes are poorly defined, allowing it to travel to inaccessible positions, especially near the goal lines.
+Solution: Make the ball's movement robust so it cannot travel beyond the sides of the goal line except through the goal net.
+Use Cannon.js's collision filters to restrict the ball’s movement, allowing it to pass only through the goal net and not the sides.
+Add invisible walls or planes around the field boundaries to keep the ball within the playable area.
+Adjust the ball’s restitution (bounciness) and friction to prevent erratic behavior.
+
+
+
+2. AI Opponent Movement
+
+Issue: The AI opponent moves too slowly (e.g., pixel per second) and lacks responsiveness.
+Solution: Make the AI quicker and more dynamic.
+Increase the AI’s movement speed by multiplying its velocity vector or increasing the force applied to its movement.
+Implement a simple state machine with states like "chase ball," "defend goal," and "attack" to enhance responsiveness and challenge.
+
+
+
+3. Player Backward Movement Speed
+
+Issue: The player’s backward movement (likely triggered by the "S" key) is too slow.
+Solution: Increase the backward movement speed.
+Adjust the speed variable or force applied when the backward key (e.g., "S") is pressed.
+Ensure the increase maintains balance with forward movement for smooth gameplay.
+
+
+
+4. Visual Enhancement: Coin on Player’s Head
+
+Task: Load an image of a coin on top of the player’s head.
+Solution:
+Create a THREE.Mesh or sprite for the coin using a texture from an image file.
+Position the coin relative to the player’s head using local transformations, ensuring it follows the player’s movements.
+
+
+
+5. Crypto Memes and Puns
+
+Task: Add humor with cryptocurrency and blockchain-related memes and puns.
+Solution:
+Use THREE.TextGeometry to display text overlays with puns like "HODL the ball!" or "To the moon!" during key events (e.g., scoring).
+Add sound effects like "Wow!" or "Much score!" triggered by goals or actions.
+Include visual gags, such as a "mining" animation (e.g., a pickaxe effect) when a player scores.
+
+
+
+Testing
+
+Test each enhancement individually to ensure functionality and seamless integration.
+Verify that:
+The ball stays within bounds and only enters the goal net.
+The AI and player movements are noticeably quicker and responsive.
+The coin appears correctly above the player’s head.
+Memes and puns enhance the game’s humor without disrupting mechanics.
+
+
+
+Ensure all changes are optimized for performance and do not introduce new bugs.
