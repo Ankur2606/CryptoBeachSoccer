@@ -125,6 +125,12 @@ const MultiplayerLobby = () => {
        'game-start', 'room-joined', 'player-left'].forEach(type => {
         websocketService.off(type, () => {});
       });
+      
+      // Clear any active timeouts
+      if (joinTimeoutRef.current) {
+        clearTimeout(joinTimeoutRef.current);
+        joinTimeoutRef.current = null;
+      }
     };
   }, [setGameState, playSuccess]);
   
@@ -159,8 +165,9 @@ const MultiplayerLobby = () => {
     }
     
     // Clear any existing join timeout
-    if (window.joinTimeout) {
-      clearTimeout(window.joinTimeout);
+    if (joinTimeoutRef.current) {
+      clearTimeout(joinTimeoutRef.current);
+      joinTimeoutRef.current = null;
     }
     
     setIsJoining(true);
@@ -169,11 +176,12 @@ const MultiplayerLobby = () => {
     websocketService.joinRoom(roomToJoin.trim());
     
     // Set a timeout to clear the joining state if no response received
-    window.joinTimeout = setTimeout(() => {
+    joinTimeoutRef.current = setTimeout(() => {
       if (isJoining) {
         setIsJoining(false);
         setError('Joining timed out. Please try again.');
       }
+      joinTimeoutRef.current = null;
     }, 5000); // 5 seconds timeout
   };
   
