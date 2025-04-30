@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 
-export type GameState = 'menu' | 'character_select' | 'playing' | 'game_over';
+export type GameState = 'menu' | 'character_select' | 'playing' | 'game_over' | 'multiplayer_lobby';
 
 interface GameStateStore {
   // Game state
@@ -12,6 +12,11 @@ interface GameStateStore {
   gameTime: number;
   timerInterval: NodeJS.Timeout | null;
   
+  // Multiplayer state
+  isMultiplayer: boolean;
+  opponentName: string;
+  opponentScore: number;
+  
   // Actions
   setGameState: (state: GameState) => void;
   setPlayerName: (name: string) => void;
@@ -20,6 +25,11 @@ interface GameStateStore {
   startTimer: () => void;
   stopTimer: () => void;
   resetGame: () => void;
+  
+  // Multiplayer actions
+  setMultiplayerMode: (isMultiplayer: boolean) => void;
+  setOpponentName: (name: string) => void;
+  incrementOpponentScore: () => void;
 }
 
 export const useGameState = create<GameStateStore>()(
@@ -31,6 +41,11 @@ export const useGameState = create<GameStateStore>()(
     aiScore: 0,
     gameTime: 0,
     timerInterval: null,
+    
+    // Multiplayer initial state
+    isMultiplayer: false,
+    opponentName: '',
+    opponentScore: 0,
     
     // Actions
     setGameState: (state) => set({ gameState: state }),
@@ -94,8 +109,18 @@ export const useGameState = create<GameStateStore>()(
         playerScore: 0,
         aiScore: 0,
         gameTime: 0,
-        timerInterval: null
+        timerInterval: null,
+        opponentScore: 0
       });
-    }
+    },
+    
+    // Multiplayer actions
+    setMultiplayerMode: (isMultiplayer) => set({ isMultiplayer }),
+    
+    setOpponentName: (name) => set({ opponentName: name }),
+    
+    incrementOpponentScore: () => set((state) => ({ 
+      opponentScore: state.opponentScore + 1 
+    }))
   }))
 );
