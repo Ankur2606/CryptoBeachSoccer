@@ -20,7 +20,9 @@ const Ball = () => {
     lastResetTime: 0,
     isResetting: false,
     positionHistory: [] as THREE.Vector3[],
-    earthGravityApplied: false // Track if earth gravity has been applied
+    earthGravityApplied: false, // Track if earth gravity has been applied
+    cornerStuckTime: 0, // Track time spent in corner
+    inCorner: false // Track if ball is in corner
   });
   
   // Manual ball reset function
@@ -177,8 +179,10 @@ const Ball = () => {
       const playerGoalZ = halfDepth + 1;
       
       // Check if ball is in goal corners
-      if ((Math.abs(position.x) > cornerDistance) && 
-          ((Math.abs(position.z - aiGoalZ) < 2.2) || (Math.abs(position.z - playerGoalZ) < 2.2))) {
+      const isInGoalCorner = (Math.abs(position.x) > cornerDistance) && 
+                             ((Math.abs(position.z - aiGoalZ) < 2.2) || (Math.abs(position.z - playerGoalZ) < 2.2));
+                           
+      if (isInGoalCorner) {
         // Push ball away from corners with greater force
         const directionX = position.x > 0 ? -1 : 1;
         const directionZ = position.z > 0 ? -1 : 1;
@@ -189,6 +193,25 @@ const Ball = () => {
         boundaryHit = true;
         
         console.log("⚽ Ball pushed away from goal corner");
+        
+        // Track time in corner
+        if (!ballStateRef.current.inCorner) {
+          ballStateRef.current.inCorner = true;
+          ballStateRef.current.cornerStuckTime = 0;
+        } else {
+          ballStateRef.current.cornerStuckTime += delta;
+          
+          // If ball stays in corner for more than 3 seconds, reset to middle
+          if (ballStateRef.current.cornerStuckTime > 3 && !ballStateRef.current.isResetting) {
+            resetPosition = true;
+            console.log("⚽ Ball stuck in goal corner for more than 3 seconds, resetting to middle...");
+            ballStateRef.current.cornerStuckTime = 0;
+          }
+        }
+      } else {
+        // Reset corner tracking when not in corner
+        ballStateRef.current.inCorner = false;
+        ballStateRef.current.cornerStuckTime = 0;
       }
       
       // Play sound when ball hits boundary

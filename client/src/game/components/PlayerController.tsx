@@ -236,12 +236,12 @@ const PlayerController = ({ character }: { character: string }) => {
     if (direction.current.length() > 0) {
       // IMPORTANT: For extremely responsive movement, we use direct velocity manipulation
       // with a bit of inertia to avoid abrupt stops and starts
-      const desiredVelocityX = direction.current.x * 10; // Target velocity for X-axis
+      const desiredVelocityX = direction.current.x * 15; // Target velocity for X-axis - increased from 10 to 15 for faster sideways movement
       
       // Adjust Z-axis velocity based on forward/backward direction
       const desiredVelocityZ = direction.current.z > 0 
-        ? direction.current.z * 12  // Backward (S key)
-        : direction.current.z * 12;  // Forward (W key) - increased from 8 to 12 for faster forward movement
+        ? direction.current.z * 14  // Backward (S key)
+        : direction.current.z * 14;  // Forward (W key) - increased from 8 to 12 for faster forward movement
       
       // Blend current and desired velocity (smaller first number = more responsive)
       playerBody.velocity.x = playerBody.velocity.x * 0.2 + desiredVelocityX * 0.8;
@@ -326,7 +326,7 @@ const PlayerController = ({ character }: { character: string }) => {
           
           // Calculate angle based on distance to provide better arc for projectile motion
           // For stronger kicks (higher multiplier), use a flatter trajectory
-          const kickAngle = Math.PI / (3 + kickMultiplier * 0.5); // Dynamic angle based on kick strength
+          const kickAngle = Math.PI / (2 + kickMultiplier *1); // Dynamic angle based on kick strength
           
           // Calculate velocity components for projectile motion
           const vx = playerDir.x * kickForce * 0.8;
