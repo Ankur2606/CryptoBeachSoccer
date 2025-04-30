@@ -53,9 +53,25 @@ export const usePhysics = create<PhysicsStore>()(
     
     // Initialize physics world
     initPhysics: () => {
+      // Clean up any existing world
+      const existingWorld = get().world;
+      if (existingWorld) {
+        console.log('Cleaning up existing physics world');
+        get().cleanup();
+      }
+
       // Check if CANNON is available (from CDN)
       if (typeof window === 'undefined' || !(window as any).CANNON) {
-        console.error('CANNON.js not available');
+        console.error('CANNON.js not available, attempting to load it dynamically');
+        
+        // Check if we're already trying to load CANNON.js
+        if ((window as any).__CANNON_LOADING) {
+          console.log('CANNON.js is already being loaded, waiting...');
+          return;
+        }
+        
+        // Mark that we're loading CANNON.js
+        (window as any).__CANNON_LOADING = true;
         
         // Add script element dynamically if not already loaded
         const script = document.createElement('script');
@@ -63,29 +79,52 @@ export const usePhysics = create<PhysicsStore>()(
         script.async = true;
         script.onload = () => {
           console.log('CANNON.js loaded dynamically');
+          (window as any).__CANNON_LOADING = false;
+          
           // Retry initialization after script loads
           setTimeout(() => get().initPhysics(), 100);
+        };
+        script.onerror = () => {
+          console.error('Failed to load CANNON.js dynamically');
+          (window as any).__CANNON_LOADING = false;
         };
         document.head.appendChild(script);
         return;
       }
       
-      console.log('Initializing physics world with CANNON.js');
-      const CANNON = (window as any).CANNON;
-      
-      // Create a new world
-      const world = new CANNON.World();
-      world.gravity.set(0, -9.81, 0); // Set gravity
-      world.broadphase = new CANNON.NaiveBroadphase();
-      world.solver.iterations = 10;
-      
-      // Store world reference
-      set({ world });
-      
-      // Make world available globally for debugging
-      (window as any).CANNON = CANNON;
-      (window as any).physicsWorld = world;
-      console.log('Physics world initialized successfully');
+      try {
+        console.log('Initializing physics world with CANNON.js');
+        const CANNON = (window as any).CANNON;
+        
+        // Create a new world
+        const world = new CANNON.World();
+        world.gravity.set(0, -9.81, 0); // Set gravity
+        
+        // Add a default ground plane
+        const groundShape = new CANNON.Plane();
+        const groundBody = new CANNON.Body({ mass: 0 }); // Mass 0 = static body
+        groundBody.addShape(groundShape);
+        groundBody.quaternion.setFromAxisAngle(
+          new CANNON.Vec3(1, 0, 0), // Rotate around X axis
+          -Math.PI / 2 // -90 degrees to face up
+        );
+        groundBody.position.set(0, -0.1, 0); // Slightly below y=0
+        world.addBody(groundBody);
+        
+        // Configure world properties
+        world.broadphase = new CANNON.NaiveBroadphase();
+        world.solver.iterations = 10;
+        
+        // Store world reference
+        set({ world });
+        
+        // Make world available globally for debugging
+        (window as any).CANNON = CANNON;
+        (window as any).physicsWorld = world;
+        console.log('Physics world initialized successfully');
+      } catch (error) {
+        console.error('Failed to initialize physics world:', error);
+      }
     },
     
     // Update physics simulation

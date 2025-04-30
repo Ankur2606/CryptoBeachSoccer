@@ -180,14 +180,18 @@ const Character = ({
         </mesh>
         
         {/* Arms */}
-        <mesh position={[0.4, 0.7, 0]} castShadow>
-          <capsuleGeometry args={[0.1, 0.7, 16, 16]} rotation={[0, 0, Math.PI/2]} />
-          <meshStandardMaterial color="#ffdbac" /> {/* Skin tone */}
-        </mesh>
-        <mesh position={[-0.4, 0.7, 0]} castShadow>
-          <capsuleGeometry args={[0.1, 0.7, 16, 16]} rotation={[0, 0, -Math.PI/2]} />
-          <meshStandardMaterial color="#ffdbac" /> {/* Skin tone */}
-        </mesh>
+        <group position={[0.4, 0.7, 0]} rotation={[0, 0, Math.PI/2]}>
+          <mesh castShadow>
+            <capsuleGeometry args={[0.1, 0.7, 16, 16]} />
+            <meshStandardMaterial color="#ffdbac" /> {/* Skin tone */}
+          </mesh>
+        </group>
+        <group position={[-0.4, 0.7, 0]} rotation={[0, 0, -Math.PI/2]}>
+          <mesh castShadow>
+            <capsuleGeometry args={[0.1, 0.7, 16, 16]} />
+            <meshStandardMaterial color="#ffdbac" /> {/* Skin tone */}
+          </mesh>
+        </group>
         
         {/* Legs */}
         <mesh position={[0.2, 0, 0]} castShadow>
