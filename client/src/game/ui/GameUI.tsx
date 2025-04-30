@@ -1,11 +1,28 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useGameState } from '@/lib/stores/useGameState';
 import { useCharacter } from '@/lib/stores/useCharacter';
 import { useAudio } from '@/lib/stores/useAudio';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Trophy, VolumeX, Volume2 } from 'lucide-react';
+import { Trophy, VolumeX, Volume2, TrendingUp, Coins } from 'lucide-react';
 import { characterData } from '../models/character';
+
+// Crypto-themed puns and memes for random display
+const CRYPTO_PUNS = [
+  "HODL the ball! 💎🙌",
+  "To the moon! 🚀🌕",
+  "Buy the dip! 📉📈",
+  "When lambo? 🏎️",
+  "Not your keys, not your goal! 🔑⚽",
+  "This is the way! 🔄",
+  "Much wow! Such goal! 🐕",
+  "We're all gonna make it! 🎯",
+  "Stake it till you make it! 🥩",
+  "Diamond feet! 💎👟",
+  "Pump it! 📈",
+  "NO FUD allowed on the field! 🚫",
+  "Proof of Score! ⚽✅"
+];
 
 const GameUI = () => {
   const { 
@@ -20,8 +37,14 @@ const GameUI = () => {
   } = useGameState();
   
   const { selectedCharacter, cooldownRemaining } = useCharacter();
-  const { toggleMute, isMuted } = useAudio();
+  const { toggleMute, isMuted, playHit, playSuccess } = useAudio();
   const [showGameOver, setShowGameOver] = useState(false);
+  
+  // Crypto pun notification system
+  const [currentPun, setCurrentPun] = useState<string>("");
+  const [showPun, setShowPun] = useState(false);
+  const lastScoreRef = useRef({ player: 0, ai: 0 });
+  const punTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Format time as MM:SS
   const formatTime = (seconds: number) => {
@@ -55,6 +78,42 @@ const GameUI = () => {
       setShowGameOver(false);
     }
   }, [gameState]);
+  
+  // Display random crypto puns on scoring
+  useEffect(() => {
+    // Check if a score changed
+    if (gameState === 'playing' && 
+        (playerScore !== lastScoreRef.current.player || aiScore !== lastScoreRef.current.ai)) {
+      
+      // Display a random pun
+      const randomPun = CRYPTO_PUNS[Math.floor(Math.random() * CRYPTO_PUNS.length)];
+      setCurrentPun(randomPun);
+      setShowPun(true);
+      
+      // Play success sound
+      playSuccess();
+      
+      // Clear any existing timeout
+      if (punTimeoutRef.current) {
+        clearTimeout(punTimeoutRef.current);
+      }
+      
+      // Hide pun after 3 seconds
+      punTimeoutRef.current = setTimeout(() => {
+        setShowPun(false);
+      }, 3000);
+      
+      // Update last score reference
+      lastScoreRef.current = { player: playerScore, ai: aiScore };
+    }
+    
+    // Clean up timeout on unmount
+    return () => {
+      if (punTimeoutRef.current) {
+        clearTimeout(punTimeoutRef.current);
+      }
+    };
+  }, [playerScore, aiScore, gameState, playSuccess]);
   
   // Handle restart game
   const handleRestart = () => {
@@ -99,9 +158,20 @@ const GameUI = () => {
           </Button>
         </div>
         
-        {/* Ability info */}
+        {/* Crypto Pun Notification */}
+        {showPun && (
+          <div className="fixed top-1/4 inset-x-0 flex justify-center items-center">
+            <div className="bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-500 text-black font-bold py-3 px-6 rounded-lg text-xl animate-bounce shadow-lg flex items-center gap-2">
+              <Coins className="h-6 w-6" />
+              {currentPun}
+            </div>
+          </div>
+        )}
+        
+        {/* Crypto Ability info */}
         <div className="fixed bottom-24 right-4 p-2 bg-black/50 backdrop-blur-sm rounded-md">
-          <div className="text-white text-sm mb-1">
+          <div className="text-white text-sm mb-1 flex items-center gap-1">
+            <TrendingUp className="h-4 w-4 text-yellow-400" />
             {character.abilityName}
           </div>
           
@@ -147,12 +217,20 @@ const GameUI = () => {
               
               <div className="mt-4 text-lg">
                 {playerScore > aiScore ? (
-                  <span className="text-green-500 font-bold">You win! 🏆</span>
+                  <span className="text-green-500 font-bold">You win! TO THE MOON! 🚀🌕</span>
                 ) : playerScore < aiScore ? (
-                  <span className="text-red-500 font-bold">You lose! 👾</span>
+                  <span className="text-red-500 font-bold">You lose! BEAR MARKET DETECTED 📉</span>
                 ) : (
-                  <span className="text-yellow-500 font-bold">It's a tie! 🤝</span>
+                  <span className="text-yellow-500 font-bold">It's a tie! HODL FOR NEXT MATCH! 💎🙌</span>
                 )}
+              </div>
+              
+              <div className="mt-2 text-sm text-gray-500 font-medium">
+                {playerScore > aiScore ? 
+                  "Your crypto soccer skills are bullish! Perfect diamond feet strategy!" :
+                  playerScore < aiScore ? 
+                  "Don't panic sell! Just practice and buy the dip next match!" :
+                  "Staked your coins but no yield this time. Keep HODLing!"}
               </div>
             </div>
             

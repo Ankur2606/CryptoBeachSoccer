@@ -119,7 +119,12 @@ const PlayerController = ({ character }: { character: string }) => {
       // IMPORTANT: For extremely responsive movement, we use direct velocity manipulation
       // with a bit of inertia to avoid abrupt stops and starts
       const desiredVelocityX = direction.current.x * 10; // Target velocity for X-axis
-      const desiredVelocityZ = direction.current.z * 8;  // Target velocity for Z-axis (forward/backward)
+      
+      // Adjust Z-axis velocity based on forward/backward direction
+      // Use faster backward movement (increased from 8 to 12)
+      const desiredVelocityZ = direction.current.z > 0 
+        ? direction.current.z * 12  // Backward (S key) - increased speed
+        : direction.current.z * 8;  // Forward (W key)
       
       // Blend current and desired velocity (smaller first number = more responsive)
       playerBody.velocity.x = playerBody.velocity.x * 0.2 + desiredVelocityX * 0.8;
