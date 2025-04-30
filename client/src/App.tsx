@@ -7,6 +7,7 @@ import MainMenu from "./game/screens/MainMenu";
 import CharacterSelect from "./game/screens/CharacterSelect";
 import GameScreen from "./game/screens/GameScreen";
 import LoadingScreen from "./game/screens/LoadingScreen";
+import MultiplayerLobby from "./game/screens/MultiplayerLobby";
 import "@fontsource/inter";
 
 // Define control keys for the game
@@ -42,6 +43,8 @@ function App() {
           {gameState === 'menu' && <MainMenu />}
           
           {gameState === 'character_select' && <CharacterSelect />}
+          
+          {gameState === 'multiplayer_lobby' && <MultiplayerLobby />}
           
           {(gameState === 'playing' || gameState === 'game_over') && (
             <GameScreen />

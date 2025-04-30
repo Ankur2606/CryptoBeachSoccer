@@ -3,14 +3,16 @@ import { useGameState } from '@/lib/stores/useGameState';
 import { useAudio } from '@/lib/stores/useAudio';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import LoginModal from '../ui/LoginModal';
-import { VolumeX, Volume2 } from 'lucide-react';
+import { VolumeX, Volume2, Users, User } from 'lucide-react';
 
 const MainMenu = () => {
-  const { startGame, setGameState } = useGameState();
+  const { setGameState, setMultiplayerMode } = useGameState();
   const { backgroundMusic, toggleMute, isMuted } = useAudio();
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [gameMode, setGameMode] = useState<'singleplayer' | 'multiplayer'>('singleplayer');
 
   // Start background music when the menu loads
   useEffect(() => {
@@ -31,7 +33,16 @@ const MainMenu = () => {
   }, [backgroundMusic]);
 
   const handlePlay = () => {
-    setGameState('character_select');
+    // Set multiplayer mode based on the selected option
+    setMultiplayerMode(gameMode === 'multiplayer');
+    
+    if (gameMode === 'singleplayer') {
+      // Go to character selection for single player
+      setGameState('character_select');
+    } else {
+      // Go to multiplayer lobby for multiplayer
+      setGameState('multiplayer_lobby');
+    }
   };
 
   const handleOpenLogin = () => {
@@ -40,6 +51,11 @@ const MainMenu = () => {
 
   const handleCloseLogin = () => {
     setIsLoginOpen(false);
+  };
+  
+  // Handle game mode selection
+  const handleGameModeChange = (value: string) => {
+    setGameMode(value as 'singleplayer' | 'multiplayer');
   };
 
   // Array of crypto coins for the background animation
@@ -83,9 +99,42 @@ const MainMenu = () => {
           CRYPTO BEACH SOCCER
         </h1>
         
-        <p className="text-white mb-8 text-center">
+        <p className="text-white mb-4 text-center">
           The ultimate beach soccer game with your favorite crypto characters!
         </p>
+        
+        {/* Game Mode Selection */}
+        <div className="w-full mb-6">
+          <Tabs
+            defaultValue="singleplayer"
+            className="w-full"
+            value={gameMode}
+            onValueChange={handleGameModeChange}
+          >
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger 
+                value="singleplayer"
+                className="flex items-center justify-center gap-2"
+              >
+                <User className="h-4 w-4" />
+                <span>Single Player</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="multiplayer"
+                className="flex items-center justify-center gap-2"
+              >
+                <Users className="h-4 w-4" />
+                <span>Multiplayer</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          
+          <div className="text-xs text-center mt-2 text-white/80">
+            {gameMode === 'singleplayer' 
+              ? 'Play against AI opponent' 
+              : 'Play 1v1 with another player'}
+          </div>
+        </div>
         
         <div className="space-y-4 w-full">
           <Button 
@@ -93,7 +142,7 @@ const MainMenu = () => {
             className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-bold"
             onClick={handlePlay}
           >
-            PLAY NOW
+            {gameMode === 'singleplayer' ? 'START GAME' : 'JOIN MULTIPLAYER'}
           </Button>
           
           <Button 

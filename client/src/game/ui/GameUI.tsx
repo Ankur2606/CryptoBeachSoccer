@@ -31,10 +31,14 @@ const GameUI = () => {
     setGameState, 
     playerScore, 
     aiScore, 
+    opponentScore,
     gameTime, 
     resetGame,
     startTimer,
     stopTimer,
+    isMultiplayer,
+    opponentName,
+    playerName
   } = useGameState();
   
   const { selectedCharacter, cooldownRemaining, isAbilityActive } = useCharacter();
@@ -150,7 +154,8 @@ const GameUI = () => {
   // Handle restart game
   const handleRestart = () => {
     resetGame();
-    setGameState('character_select');
+    // Go to character select for single-player, or multiplayer lobby for multiplayer
+    setGameState(isMultiplayer ? 'multiplayer_lobby' : 'character_select');
     setShowGameOver(false);
   };
   
@@ -169,10 +174,10 @@ const GameUI = () => {
         <div className="fixed top-0 inset-x-0 p-4 flex justify-between items-center bg-gradient-to-b from-black/50 to-transparent">
           <div className="flex items-center gap-4">
             <div className="bg-black/50 backdrop-blur-sm py-1 px-3 rounded-md text-white font-bold">
-              Player: {playerScore}
+              {playerName || 'Player'}: {playerScore}
             </div>
             <div className="bg-black/50 backdrop-blur-sm py-1 px-3 rounded-md text-white font-bold">
-              AI: {aiScore}
+              {isMultiplayer ? (opponentName || 'Opponent') : 'AI'}: {isMultiplayer ? opponentScore : aiScore}
             </div>
           </div>
           
@@ -271,32 +276,50 @@ const GameUI = () => {
               <div className="text-xl mb-2">Final Score</div>
               <div className="flex justify-center items-center gap-8">
                 <div>
-                  <div className="text-lg font-bold">Player</div>
+                  <div className="text-lg font-bold">{playerName || 'Player'}</div>
                   <div className="text-3xl font-bold">{playerScore}</div>
                 </div>
                 <div className="text-xl">vs</div>
                 <div>
-                  <div className="text-lg font-bold">AI</div>
-                  <div className="text-3xl font-bold">{aiScore}</div>
+                  <div className="text-lg font-bold">{isMultiplayer ? (opponentName || 'Opponent') : 'AI'}</div>
+                  <div className="text-3xl font-bold">{isMultiplayer ? opponentScore : aiScore}</div>
                 </div>
               </div>
               
               <div className="mt-4 text-lg">
-                {playerScore > aiScore ? (
-                  <span className="text-green-500 font-bold">You win! TO THE MOON! 🚀🌕</span>
-                ) : playerScore < aiScore ? (
-                  <span className="text-red-500 font-bold">You lose! BEAR MARKET DETECTED 📉</span>
+                {isMultiplayer ? (
+                  playerScore > opponentScore ? (
+                    <span className="text-green-500 font-bold">You win! TO THE MOON! 🚀🌕</span>
+                  ) : playerScore < opponentScore ? (
+                    <span className="text-red-500 font-bold">You lose! BEAR MARKET DETECTED 📉</span>
+                  ) : (
+                    <span className="text-yellow-500 font-bold">It's a tie! HODL FOR NEXT MATCH! 💎🙌</span>
+                  )
                 ) : (
-                  <span className="text-yellow-500 font-bold">It's a tie! HODL FOR NEXT MATCH! 💎🙌</span>
+                  playerScore > aiScore ? (
+                    <span className="text-green-500 font-bold">You win! TO THE MOON! 🚀🌕</span>
+                  ) : playerScore < aiScore ? (
+                    <span className="text-red-500 font-bold">You lose! BEAR MARKET DETECTED 📉</span>
+                  ) : (
+                    <span className="text-yellow-500 font-bold">It's a tie! HODL FOR NEXT MATCH! 💎🙌</span>
+                  )
                 )}
               </div>
               
               <div className="mt-2 text-sm text-gray-500 font-medium">
-                {playerScore > aiScore ? 
-                  "Your crypto soccer skills are bullish! Perfect diamond feet strategy!" :
-                  playerScore < aiScore ? 
-                  "Don't panic sell! Just practice and buy the dip next match!" :
-                  "Staked your coins but no yield this time. Keep HODLing!"}
+                {isMultiplayer ? (
+                  playerScore > opponentScore ? 
+                    `Congratulations! You defeated ${opponentName || 'opponent'} with your crypto soccer skills!` :
+                    playerScore < opponentScore ? 
+                    `${opponentName || 'Opponent'} won this time. Just HODL and try again!` :
+                    "It's a stalemate! Both crypto traders evenly matched!"
+                ) : (
+                  playerScore > aiScore ? 
+                    "Your crypto soccer skills are bullish! Perfect diamond feet strategy!" :
+                    playerScore < aiScore ? 
+                    "Don't panic sell! Just practice and buy the dip next match!" :
+                    "Staked your coins but no yield this time. Keep HODLing!"
+                )}
               </div>
             </div>
             

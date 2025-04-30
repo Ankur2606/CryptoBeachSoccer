@@ -13,6 +13,7 @@ import Goals from '../components/Goals';
 import Effects from '../components/Effects';
 import PlayerController from '../components/PlayerController';
 import AIController from '../components/AIController';
+import MultiplayerController from '../components/MultiplayerController';
 import PhysicsWorld from '../components/PhysicsWorld';
 import Abilities from '../components/Abilities';
 import GameUI from '../ui/GameUI';
@@ -20,7 +21,13 @@ import TouchControls from '../components/TouchControls';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 
 const GameScreen = () => {
-  const { gameState, setGameState, resetGame } = useGameState();
+  const { 
+    gameState, 
+    setGameState, 
+    resetGame,
+    isMultiplayer,
+    opponentName
+  } = useGameState();
   const { backgroundMusic } = useAudio();
   const { selectedCharacter } = useCharacter();
   const { initPhysics, cleanup } = usePhysics();
@@ -132,8 +139,8 @@ const GameScreen = () => {
             {/* Player controller */}
             <PlayerController character={selectedCharacter} />
             
-            {/* AI controller */}
-            <AIController />
+            {/* AI controller - only in single player mode */}
+            {!isMultiplayer && <AIController />}
 
             {/* Crypto-themed ability pickups */}
             <Abilities />
@@ -152,6 +159,9 @@ const GameScreen = () => {
       
       {/* Mobile touch controls */}
       {isMobile && <TouchControls />}
+      
+      {/* Multiplayer controller for game state synchronization */}
+      {isMultiplayer && <MultiplayerController />}
     </>
   );
 };
