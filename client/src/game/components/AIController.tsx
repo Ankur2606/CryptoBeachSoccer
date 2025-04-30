@@ -60,8 +60,28 @@ const AIController = () => {
     const shouldMove = Math.random() < difficulty;
     if (shouldMove) {
       const moveSpeed = 45; // Slightly slower than player
-      const force = moveDirection.multiplyScalar(moveSpeed * aiBody.mass);
+      
+      // Direct velocity control (more responsive)
+      const targetVelocityX = moveDirection.x * 6;
+      aiBody.velocity.x = aiBody.velocity.x * 0.7 + targetVelocityX * 0.3;
+      
+      // Also use Z-axis movement (forward/backward)
+      const moveZ = targetPosition.current.z - aiPos.z;
+      if (Math.abs(moveZ) > 0.5) {
+        const directionZ = moveZ > 0 ? 1 : -1;
+        aiBody.velocity.z = aiBody.velocity.z * 0.7 + directionZ * 4 * 0.3;
+      } else {
+        aiBody.velocity.z *= 0.9; // Damping
+      }
+      
+      // Also apply force for good measure
+      const force = new Vector3(moveDirection.x, 0, 0).multiplyScalar(moveSpeed * aiBody.mass);
       applyForce(aiBody, [force.x, 0, 0]);
+      
+      // Log AI movement occasionally
+      if (Math.random() < 0.01) {
+        console.log("AI moving to:", targetPosition.current);
+      }
     }
     
     // Jump occasionally if ball is above AI

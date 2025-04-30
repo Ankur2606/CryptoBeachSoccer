@@ -143,12 +143,24 @@ const PlayerController = ({ character }: { character: string }) => {
       playerBody.velocity.z *= 0.7; 
     }
     
-    // Jump (only when on ground)
+    // Separate the jump logic from forward movement
+    // Jump (only when on ground and W/Up is pressed)
     if (keys.jump && isOnGroundRef.current && jumpCooldownRef.current <= 0) {
       const jumpForce = JUMP_FORCE * 20 * playerBody.mass; // Scale for better jump
       applyForce(playerBody, [0, jumpForce, 0]);
       jumpCooldownRef.current = 0.3; // Shorter cooldown for responsive jumps
       console.log("Jump applied", jumpForce);
+    }
+    
+    // Display key mapping info occasionally for debugging
+    if (frameCount.current % 600 === 0) {
+      console.log(`🎮 CONTROLS: 
+        WASD/Arrows: Move character
+        W/Up: Move forward and Jump
+        S/Down: Move backward
+        A/Left, D/Right: Move left/right
+        Space: Kick the ball
+        E/Shift: Use special ability`);
     }
     
     // Kick the ball with spacebar
