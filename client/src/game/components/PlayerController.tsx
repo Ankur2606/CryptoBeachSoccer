@@ -180,21 +180,56 @@ const PlayerController = ({ character }: { character: string }) => {
         const dz = ballPos.z - playerPos.z;
         const distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
         
-        // Only kick if ball is within range
-        if (distance < 3) { // Increased range for better game feel
-          // Kick direction (always toward opponent's goal)
-          const kickForce = KICK_POWER * 3;
-          // Make sure we have exactly 3 components for the vector
-          const kickVector: [number, number, number] = [dx * 0.2, 2, -kickForce * 0.8]; 
+        // Only kick if ball is within range (increased range for better gameplay)
+        if (distance < 4) {
+          // Get player's facing direction based on recent movement
+          const playerDir = new Vector3(
+            playerBody.velocity.x, 
+            0, 
+            playerBody.velocity.z
+          ).normalize();
           
+          // If player is not moving, kick toward opponent's goal
+          if (playerDir.length() < 0.1) {
+            playerDir.set(0, 0, -1); // Default: kick toward opponent's goal
+          }
+          
+          // Calculate kick force based on direction and position
+          // The kick should be stronger and more precise
+          const kickForce = KICK_POWER * 8; // Significantly increased kick power
+          
+          // Create kick vector:
+          // - Direction: primarily in player's facing direction
+          // - Vertical component: add upward force for better arc
+          // - Strength: apply significant force for visible movement
+          const kickVector: [number, number, number] = [
+            playerDir.x * kickForce * 0.8, // X component
+            3,                             // Y component (upward force)
+            playerDir.z * kickForce        // Z component (forward force)
+          ];
+          
+          // Reset ball angular velocity before applying new force
+          ballBody.angularVelocity.set(0, 0, 0);
+          
+          // Apply the kick force
+          ballBody.velocity.set(0, 0, 0); // Reset velocity first for more consistent kicks
           applyForce(ballBody, kickVector);
-          console.log("Ball kicked with force:", kickVector);
+          
+          // Add random spin to make kick more dynamic
+          const spinForce = 2 + Math.random() * 3;
+          const spinX = (Math.random() - 0.5) * spinForce;
+          const spinY = (Math.random() - 0.5) * spinForce;
+          const spinZ = (Math.random() - 0.5) * spinForce;
+          
+          ballBody.angularVelocity.set(spinX, spinY, spinZ);
+          
+          console.log("⚽ Ball kicked with force:", kickVector);
           
           // Play kick sound
           playHit();
           
-          // Set cooldown
-          kickCooldownRef.current = 0.5; // 0.5 second cooldown
+          // Set cooldown - shorter for more responsive gameplay
+          kickCooldownRef.current = 0.3;
         } else {
           console.log("Ball too far to kick, distance:", distance);
         }

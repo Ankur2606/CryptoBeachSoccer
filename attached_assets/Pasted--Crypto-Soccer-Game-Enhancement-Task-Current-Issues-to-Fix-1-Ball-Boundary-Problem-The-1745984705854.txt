@@ -1,0 +1,112 @@
+# Crypto Soccer Game Enhancement Task
+
+## Current Issues to Fix
+1. **Ball Boundary Problem**: The ball is not staying within the playable area
+2. **Kick Animation Issue**: Kick animation plays but has no effect on the ball
+3. **Missing Game Features**: Need to add reload option and crypto-themed abilities
+
+## Required Implementations
+
+### 1. Ball Physics and Boundary Correction
+- Implement proper collision detection between the ball and the playable area boundaries
+- Add bounce-back mechanics when the ball hits boundaries to keep it in play
+- Ensure the ball's physics properties (mass, velocity, friction) are properly configured
+- Debug the current boundary detection code to identify why the ball isn't staying in bounds
+
+### 2. Kick Mechanics Enhancement
+- Fix the spacebar kick functionality so the ball responds properly to player kicks
+- Calculate appropriate force and direction for the ball based on player position and facing direction
+- Ensure the kick animation timing syncs with the actual physics application on the ball
+- Add visual feedback (e.g., small particle effect or motion blur) when the ball is successfully kicked
+- Implement variable kick strength based on how long the spacebar is held (optional)
+- Code sample structure for kick implementation:
+```javascript
+function handleKick(player, ball) {
+  // Play kick animation
+  player.playAnimation('kick');
+  
+  // Calculate kick direction vector based on player orientation
+  const kickDirection = new THREE.Vector3(/* direction calculation */);
+  
+  // Apply force to ball
+  const kickStrength = 5.0; // Adjust as needed
+  ball.velocity.add(kickDirection.multiplyScalar(kickStrength));
+  
+  // Add kick sound effect
+  playSound('kickSound');
+}
+```
+
+### 3. Game Controls - Add Reload Option
+- Implement a reload button or keyboard shortcut (e.g., 'R' key) to restart the current game
+- Add a visual indicator for the reload option in the UI
+- Ensure all game objects reset to their initial state when reloaded
+- Consider adding a confirmation dialog before reloading to prevent accidental resets
+
+### 4. Crypto-Themed Abilities System
+
+#### Core Ability System:
+- Create a base class/structure for abilities with common properties:
+  - Name, punny title, image/icon, duration, effect magnitude
+  - Spawn/despawn behavior
+  - Collection detection
+  - Visual and audio feedback on collection
+  - Status effect application and expiration
+
+#### Specific Abilities to Implement:
+1. **Bitcoin Boost**
+   - Title: "Mine Your Way to Victory!"
+   - Visual: Floating 3D Bitcoin (₿) logo with gold material
+   - Effect: Increases player movement speed by 50% for 5 seconds
+   - Visual Feedback: Gold particle trail behind player when active
+
+2. **Ethereum Energizer**
+   - Title: "Smart Moves for Smart Players!"
+   - Visual: Floating 3D Ethereum (Ξ) diamond logo with blue material
+   - Effect: Enhances jump height by 75% for 5 seconds
+   - Visual Feedback: Blue glow effect around player when active
+
+3. **Dogecoin Dash**
+   - Title: "To the Moon and Back!"
+   - Visual: Floating 3D Dogecoin Shiba Inu with yellow material
+   - Effect: Grants temporary invincibility and slight speed boost for 3 seconds
+   - Visual Feedback: Pulsing shield effect and occasional "moon" emoji particles
+
+#### Ability Spawning System:
+- Spawn abilities randomly on the field every 20-30 seconds
+- Ensure abilities appear in accessible locations (not inside obstacles or outside boundaries)
+- Use proper z-indexing to ensure abilities appear above the playing field but below UI elements
+- Make abilities rotate slowly in place and bob up/down slightly for visibility
+- Add a subtle glow effect to make abilities stand out
+
+#### Ability Collection and Effect Management:
+- Detect collision between player and ability object
+- Play collection animation and sound
+- Apply the corresponding status effect to the player
+- Display a timer or indicator showing remaining duration of the active effect
+- Handle multiple abilities being active simultaneously (stacking or replacing)
+- Properly clean up effects when they expire
+
+## Testing Checklist
+- [ ] Ball stays within playable boundaries and bounces correctly
+- [ ] Kick animation correctly applies force to the ball when spacebar is pressed
+- [ ] Reload function properly resets the game state
+- [ ] Abilities spawn at appropriate intervals in accessible locations
+- [ ] Each ability displays correct visuals and applies the intended effect
+- [ ] Effect durations work correctly with visible countdown
+- [ ] Multiple abilities interact appropriately if collected in succession
+- [ ] All visual and audio feedback works as expected
+
+## Technical Implementation Notes
+- Use Three.js for all 3D elements including the ability icons
+- Maintain consistent physics timestep for reliable ball movement
+- Optimize ability effects to prevent performance issues
+- Consider using a state management system for tracking active abilities
+- Implement proper cleanup of abilities and effects to prevent memory leaks
+- Add appropriate sound effects with volume control for all interactions
+
+## Optimization Considerations
+- Use level-of-detail (LOD) for ability models when far from player
+- Limit total number of concurrent abilities on field
+- Optimize particle effects to maintain framerate
+- Use object pooling for frequently spawned objects
