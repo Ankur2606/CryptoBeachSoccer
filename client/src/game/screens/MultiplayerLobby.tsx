@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useGameState } from '@/lib/stores/useGameState';
 import { useAudio } from '@/lib/stores/useAudio';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Coins, Users, Trophy, ChevronLeft, Loader2 } from 'lucide-react';
 import websocketService from '@/lib/multiplayer/websocketService';
+
+
 
 const MultiplayerLobby = () => {
   const { setGameState } = useGameState();
@@ -26,6 +28,9 @@ const MultiplayerLobby = () => {
   const [isJoining, setIsJoining] = useState<boolean>(false);
   const [isGameStarting, setIsGameStarting] = useState<boolean>(false);
   const [connectionAttempts, setConnectionAttempts] = useState<number>(0);
+  
+  // Refs for timeouts
+  const joinTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Initialize WebSocket connection
   useEffect(() => {
@@ -153,9 +158,23 @@ const MultiplayerLobby = () => {
       return;
     }
     
+    // Clear any existing join timeout
+    if (window.joinTimeout) {
+      clearTimeout(window.joinTimeout);
+    }
+    
     setIsJoining(true);
+    setError('');
     handleSetName();
     websocketService.joinRoom(roomToJoin.trim());
+    
+    // Set a timeout to clear the joining state if no response received
+    window.joinTimeout = setTimeout(() => {
+      if (isJoining) {
+        setIsJoining(false);
+        setError('Joining timed out. Please try again.');
+      }
+    }, 5000); // 5 seconds timeout
   };
   
   // Set player as ready
