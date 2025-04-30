@@ -87,9 +87,12 @@ const Character = ({
     }
   };
   
-  // Create the character physics body
+  // Create the character physics body ONLY ONCE
   useEffect(() => {
-    if (meshRef.current) {
+    // Use a ref to track if we've already created this body
+    const existingBody = getBody(bodyId);
+    
+    if (!existingBody && meshRef.current) {
       console.log('Creating character physics body', bodyId);
       // Create character body
       const body = addBody({
@@ -111,13 +114,17 @@ const Character = ({
         }
       });
       console.log('Character body created:', !!body);
+    } else if (existingBody) {
+      console.log(`Character body ${bodyId} already exists, skipping creation`);
     }
     
     return () => {
       // Clean up on unmount
+      console.log(`Removing character body ${bodyId}`);
       removeBody(bodyId);
     };
-  }, [addBody, bodyId, position, removeBody, type]);
+  // Important: Remove position from dependencies to prevent recreation on position change
+  }, [addBody, bodyId, getBody, removeBody, type]);
   
   // Update the character mesh with physics body position
   useFrame(() => {

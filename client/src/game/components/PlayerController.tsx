@@ -20,6 +20,7 @@ const PlayerController = ({ character }: { character: string }) => {
   const jumpCooldownRef = useRef(0);
   const direction = useRef(new Vector3());
   const isOnGroundRef = useRef(true);
+  const frameCount = useRef(0);
   
   // Log when component mounts
   useEffect(() => {
@@ -44,6 +45,9 @@ const PlayerController = ({ character }: { character: string }) => {
   
   // Process input and move character each frame
   useFrame((state, delta) => {
+    // Increment the frame counter
+    frameCount.current += 1;
+    
     // Don't process input if game is over
     if (gameState !== 'playing') return;
     
@@ -53,43 +57,58 @@ const PlayerController = ({ character }: { character: string }) => {
       return;
     }
     
-    // Get current key states
+    // Get current key states - these are defined as:
+    // - left: A or Left Arrow (move left)
+    // - right: D or Right Arrow (move right)
+    // - jump: W or Up Arrow (jump)
+    // - kick: Space bar (kick the ball)
+    // - ability: E or Shift (use character's special ability)
     const keys = getKeys();
     
-    // Log key states occasionally for debugging
-    if (Math.random() < 0.01) {
-      console.log("Current keys:", keys);
+    // Log key states every few seconds (not on every frame to reduce spam)
+    if (frameCount.current % 60 === 0) {
+      const activeKeys = Object.entries(keys)
+        .filter(([_, pressed]) => pressed)
+        .map(([key]) => key);
+      
+      if (activeKeys.length > 0) {
+        console.log("Active controls:", activeKeys.join(', '));
+      }
     }
     
     // Decrease cooldowns
     if (kickCooldownRef.current > 0) kickCooldownRef.current -= delta;
     if (jumpCooldownRef.current > 0) jumpCooldownRef.current -= delta;
     
-    // Movement - use stronger forces and direct velocity for very responsive movement
+    // Movement - use stronger forces and direct velocity manipulation for responsiveness
     const moveSpeed = MOVE_SPEED * 15; // Scale up for better responsiveness
     direction.current.set(0, 0, 0);
     
-    // WASD and Arrow Keys for movement - log keys state for debugging
+    // MOVEMENT: WASD or Arrow Keys
     if (keys.left) {
       direction.current.x = -1;
-      console.log("Moving left");
+      // Only log occasionally
+      if (frameCount.current % 60 === 0) console.log("Moving LEFT using A or ←");
     }
     if (keys.right) {
       direction.current.x = 1;
-      console.log("Moving right");
+      // Only log occasionally
+      if (frameCount.current % 60 === 0) console.log("Moving RIGHT using D or →");
     }
     
     // Check if character is on ground for jumping
     isOnGroundRef.current = playerBody.position.y < 0.6;
     
-    // Apply movement force with dampening for better control
+    // Apply movement force with smoothing for better control
     if (direction.current.length() > 0) {
-      // For extremely responsive movement, directly set velocity with some inertia
-      const desiredVelocity = direction.current.x * 8; // Target velocity 
-      // Blend current and desired velocity for some inertia (lower number = more responsive)
-      playerBody.velocity.x = playerBody.velocity.x * 0.3 + desiredVelocity * 0.7;
+      // IMPORTANT: For extremely responsive movement, we use direct velocity manipulation
+      // with a bit of inertia to avoid abrupt stops and starts
+      const desiredVelocity = direction.current.x * 10; // Target velocity 
       
-      // Also apply force for acceleration
+      // Blend current and desired velocity (smaller first number = more responsive)
+      playerBody.velocity.x = playerBody.velocity.x * 0.2 + desiredVelocity * 0.8;
+      
+      // Also apply force for additional acceleration
       const force = new Vector3()
         .copy(direction.current)
         .normalize()
@@ -97,8 +116,8 @@ const PlayerController = ({ character }: { character: string }) => {
       
       applyForce(playerBody, [force.x, 0, 0]);
     } else {
-      // Apply stronger damping when not pressing movement keys
-      playerBody.velocity.x *= 0.8; // More aggressive slowdown
+      // Apply strong damping when not pressing movement keys for tight stops
+      playerBody.velocity.x *= 0.7; 
     }
     
     // Jump (only when on ground)
