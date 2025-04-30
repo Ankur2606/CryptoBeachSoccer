@@ -25,6 +25,7 @@ const MultiplayerLobby = () => {
   const [isPeerReady, setIsPeerReady] = useState<boolean>(false);
   const [isJoining, setIsJoining] = useState<boolean>(false);
   const [isGameStarting, setIsGameStarting] = useState<boolean>(false);
+  const [connectionAttempts, setConnectionAttempts] = useState<number>(0);
   
   // Initialize WebSocket connection
   useEffect(() => {
@@ -35,18 +36,40 @@ const MultiplayerLobby = () => {
         
         if (success) {
           setError('');
+          console.log('Successfully connected to multiplayer server');
         } else {
-          setError('Failed to connect to multiplayer server');
+          setError('Failed to connect to multiplayer server. Retrying...');
+          console.error('Connection failed, will retry');
+          
+          // Try again after a short delay (2 seconds)
+          setTimeout(() => {
+            connectToServer();
+          }, 2000);
         }
       } catch (err) {
-        setError('Failed to connect to multiplayer server');
+        setError('Failed to connect to multiplayer server. Retrying...');
         console.error('Connection error:', err);
+        
+        // Try again after a short delay (2 seconds)
+        setTimeout(() => {
+          connectToServer();
+        }, 2000);
       } finally {
         setIsConnecting(false);
       }
     };
     
-    connectToServer();
+    // Make an API call to check if the WebSocket server is available
+    fetch('/api/websocket-status')
+      .then(res => res.json())
+      .then(data => {
+        console.log('WebSocket server status:', data);
+        connectToServer();
+      })
+      .catch(err => {
+        console.error('Error checking WebSocket status:', err);
+        connectToServer();
+      });
     
     // Set up message handlers
     websocketService.on('room-created', (message) => {
@@ -141,6 +164,33 @@ const MultiplayerLobby = () => {
     websocketService.setReady();
   };
   
+  // Manually attempt to reconnect to the WebSocket server
+  const handleManualReconnect = async () => {
+    setError('Attempting to reconnect...');
+    setIsConnecting(true);
+    setConnectionAttempts(prev => prev + 1);
+    
+    try {
+      // First, disconnect if already connected
+      websocketService.disconnect();
+      
+      // Try to connect again
+      const success = await websocketService.connect();
+      
+      if (success) {
+        setError('');
+        console.log('Successfully reconnected to multiplayer server');
+      } else {
+        setError('Failed to reconnect. Please try again.');
+      }
+    } catch (err) {
+      console.error('Manual reconnection error:', err);
+      setError('Failed to reconnect. Please try again.');
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+  
   // Return to main menu
   const handleBackToMenu = () => {
     websocketService.disconnect();
@@ -181,8 +231,30 @@ const MultiplayerLobby = () => {
         
         <CardContent>
           {error && (
-            <div className="mb-4 p-2 bg-red-100 border border-red-300 text-red-600 rounded-md text-sm">
-              {error}
+            <div className="mb-4">
+              <div className="p-2 bg-red-100 border border-red-300 text-red-600 rounded-md text-sm">
+                {error}
+              </div>
+              {error.includes('connect') && (
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  onClick={handleManualReconnect}
+                  disabled={isConnecting}
+                  className="mt-2 w-full flex items-center justify-center gap-2"
+                >
+                  {isConnecting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Reconnecting...
+                    </>
+                  ) : (
+                    <>
+                      <span>🔄</span> Reconnect
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
           )}
           
