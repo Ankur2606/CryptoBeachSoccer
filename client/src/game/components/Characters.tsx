@@ -1,10 +1,11 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import { usePhysics } from "@/lib/stores/usePhysics";
 import { useGameState } from "@/lib/stores/useGameState";
 import { useCharacter } from "@/lib/stores/useCharacter";
+import { useAudio } from "@/lib/stores/useAudio";
 import { characterData } from "../models/character";
 
 // Character component that renders based on the selected character
@@ -50,8 +51,16 @@ const Character = ({
   score: number;
 }) => {
   const meshRef = useRef<THREE.Group>(null);
+  const leftLegRef = useRef<THREE.Mesh>(null);
+  const rightLegRef = useRef<THREE.Mesh>(null);
   const { addBody, getBody, removeBody } = usePhysics();
   const bodyId = `${type}_character`;
+  const { playHit } = useAudio();
+  
+  // State for kick animation
+  const [isKicking, setIsKicking] = useState(false);
+  const kickTimer = useRef(0);
+  const kickLegRef = useRef<THREE.Mesh | null>(null);
   
   const character = characterData[characterId];
   
@@ -86,6 +95,44 @@ const Character = ({
         return '#888888';
     }
   };
+  
+  // Setup keyboard controls for kick animation (player only)
+  useEffect(() => {
+    if (type === 'player') {
+      // Listen for kick button press
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.code === 'Space' && !isKicking && kickTimer.current <= 0) {
+          setIsKicking(true);
+          kickTimer.current = 0.3; // Animation duration in seconds
+          kickLegRef.current = Math.random() > 0.5 ? leftLegRef.current : rightLegRef.current;
+          console.log("👟 Kick animation triggered");
+          
+          // Check if near ball to play sound
+          const playerBody = getBody(bodyId);
+          const ballBody = getBody('ball');
+          
+          if (playerBody && ballBody) {
+            const playerPos = playerBody.position;
+            const ballPos = ballBody.position;
+            const dx = ballPos.x - playerPos.x;
+            const dy = ballPos.y - playerPos.y;
+            const dz = ballPos.z - playerPos.z;
+            const distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+            
+            if (distance < 3) {
+              playHit();
+            }
+          }
+        }
+      };
+      
+      window.addEventListener('keydown', handleKeyDown);
+      
+      return () => {
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [type, isKicking, bodyId, getBody, playHit]);
   
   // Create the character physics body ONLY ONCE
   useEffect(() => {
@@ -127,7 +174,7 @@ const Character = ({
   }, [addBody, bodyId, getBody, removeBody, type]);
   
   // Update the character mesh with physics body position
-  useFrame(() => {
+  useFrame((_, delta) => {
     const characterBody = getBody(bodyId);
     if (characterBody && meshRef.current) {
       const position = characterBody.position;
@@ -142,6 +189,47 @@ const Character = ({
         meshRef.current.rotation.y = Math.PI; // Player faces opponent
       } else {
         meshRef.current.rotation.y = 0; // AI faces player
+      }
+    }
+    
+    // Handle kick animation
+    if (isKicking && kickTimer.current > 0) {
+      if (kickLegRef.current) {
+        // Get the kicking leg
+        const kickingLeg = kickLegRef.current;
+        
+        // Forward kick animation - extend leg forward
+        const kickProgress = 1 - (kickTimer.current / 0.3); // 0 to 1 progress
+        
+        // Create dynamic kicking motion
+        const initialZ = type === 'player' ? -0.2 : 0.2;
+        const kickDirection = type === 'player' ? -1 : 1; // Kick direction based on character type
+        
+        // Apply kick animation
+        kickingLeg.position.z = initialZ + (kickDirection * Math.sin(kickProgress * Math.PI) * 0.7);
+        kickingLeg.position.y = -0.2 + Math.sin(kickProgress * Math.PI) * 0.3; // Lift slightly
+        
+        // Make the kicking leg visually distinct during kick
+        if (kickingLeg.material) {
+          const material = kickingLeg.material as THREE.MeshStandardMaterial;
+          material.emissive.setRGB(0.5, 0.5, 0.5);
+        }
+        
+        // Decrease timer
+        kickTimer.current -= delta;
+        
+        // Reset when animation is complete
+        if (kickTimer.current <= 0) {
+          setIsKicking(false);
+          kickingLeg.position.z = initialZ;
+          kickingLeg.position.y = -0.2;
+          
+          // Reset material
+          if (kickingLeg.material) {
+            const material = kickingLeg.material as THREE.MeshStandardMaterial;
+            material.emissive.setRGB(0, 0, 0);
+          }
+        }
       }
     }
   });
@@ -221,12 +309,20 @@ const Character = ({
           </mesh>
         </group>
         
-        {/* Legs */}
-        <mesh position={[0.2, 0, 0]} castShadow>
+        {/* Legs with refs for kick animation */}
+        <mesh 
+          ref={leftLegRef} 
+          position={[0.2, 0, 0]} 
+          castShadow
+        >
           <capsuleGeometry args={[0.12, 0.8, 16, 16]} />
           <meshStandardMaterial color={getBodyColor()} />
         </mesh>
-        <mesh position={[-0.2, 0, 0]} castShadow>
+        <mesh 
+          ref={rightLegRef} 
+          position={[-0.2, 0, 0]} 
+          castShadow
+        >
           <capsuleGeometry args={[0.12, 0.8, 16, 16]} />
           <meshStandardMaterial color={getBodyColor()} />
         </mesh>
