@@ -1,6 +1,6 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, Suspense } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Html } from "@react-three/drei";
+import { Html, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { usePhysics } from "@/lib/stores/usePhysics";
 import { useGameState } from "@/lib/stores/useGameState";
@@ -36,6 +36,28 @@ const Characters = () => {
   );
 };
 
+// 3D model loader component
+const ModelLoader = ({ modelPath, characterId }: { modelPath: string, characterId: string }) => {
+  const gltf = useGLTF(`/models/characters/${modelPath}`);
+  
+  useEffect(() => {
+    // Add shadows to all meshes in the model
+    if (gltf.scene) {
+      gltf.scene.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
+    }
+  }, [gltf]);
+
+  // Position adjustment for 3D human models
+  const positionY = characterId === 'gigachad' || characterId === 'beachbaddy' ? 0.8 : 0;
+
+  return <primitive object={gltf.scene} scale={1} position={[0, positionY, 0]} />;
+};
+
 // Single character with physics body
 const Character = ({ 
   type, 
@@ -63,6 +85,7 @@ const Character = ({
   const kickLegRef = useRef<THREE.Mesh | null>(null);
   
   const character = characterData[characterId];
+  const is3DModel = Boolean(character?.model);
   
   // Get character colors based on id
   const getCharacterColor = () => {
@@ -75,6 +98,10 @@ const Character = ({
         return '#c2a633'; // Dogecoin yellow
       case 'pepecoin':
         return '#3cbc98'; // PepeCoin green
+      case 'gigachad':
+        return '#ff6347'; // Tomato red
+      case 'beachbaddy':
+        return '#ff69b4'; // Hot pink
       default:
         return '#888888';
     }
@@ -91,6 +118,10 @@ const Character = ({
         return '#ff4500'; // Red swimsuit
       case 'pepecoin':
         return '#2e8b57'; // Green swimsuit
+      case 'gigachad':
+        return '#0077be'; // Blue swim trunks
+      case 'beachbaddy':
+        return '#ff1493'; // Pink bikini
       default:
         return '#888888';
     }
@@ -236,108 +267,162 @@ const Character = ({
   
   return (
     <group ref={meshRef} position={position}>
-      {/* Character body - capsule shape */}
-      <group>
-        {/* Large coin head */}
-        <mesh position={[0, 1.5, 0]} castShadow>
-          <cylinderGeometry args={[1, 1, 0.2, 32]} />
-          <meshStandardMaterial 
-            color={getCharacterColor()} 
-            metalness={0.8}
-            roughness={0.2}
-          />
-          
-          {/* Floating Crypto Coin above head */}
-          <group position={[0, 0.7, 0]} rotation={[0, 0, 0]}>
-            {/* Animated floating coin */}
-            <mesh castShadow position={[0, Math.sin(Date.now() * 0.003) * 0.1, 0]}>
-              <cylinderGeometry args={[0.4, 0.4, 0.05, 32]} />
-              <meshStandardMaterial 
-                color={characterId === 'bitcoin' ? '#f7931a' : 
-                      characterId === 'ethereum' ? '#627eea' :
-                      characterId === 'dogecoin' ? '#c3a634' :
-                      '#44be5a'} 
-                metalness={0.9}
-                roughness={0.1}
-                emissive={characterId === 'bitcoin' ? '#f7931a' : 
+      {is3DModel ? (
+        // Render 3D GLB model for new characters
+        <Suspense fallback={null}>
+          <group scale={1.5}>
+            <ModelLoader modelPath={character.model!} characterId={characterId} />
+          </group>
+        </Suspense>
+      ) : (
+        // Render coin-based character for crypto characters
+        <group>
+          {/* Large coin head */}
+          <mesh position={[0, 1.5, 0]} castShadow>
+            <cylinderGeometry args={[1, 1, 0.2, 32]} />
+            <meshStandardMaterial 
+              color={getCharacterColor()} 
+              metalness={0.8}
+              roughness={0.2}
+            />
+            
+            {/* Floating Crypto Coin above head */}
+            <group position={[0, 0.7, 0]} rotation={[0, 0, 0]}>
+              {/* Animated floating coin */}
+              <mesh castShadow position={[0, Math.sin(Date.now() * 0.003) * 0.1, 0]}>
+                <cylinderGeometry args={[0.4, 0.4, 0.05, 32]} />
+                <meshStandardMaterial 
+                  color={characterId === 'bitcoin' ? '#f7931a' : 
                         characterId === 'ethereum' ? '#627eea' :
                         characterId === 'dogecoin' ? '#c3a634' :
-                        '#44be5a'}
-                emissiveIntensity={0.2}
-              />
+                        '#44be5a'} 
+                  metalness={0.9}
+                  roughness={0.1}
+                  emissive={characterId === 'bitcoin' ? '#f7931a' : 
+                          characterId === 'ethereum' ? '#627eea' :
+                          characterId === 'dogecoin' ? '#c3a634' :
+                          '#44be5a'}
+                  emissiveIntensity={0.2}
+                />
+              </mesh>
+            </group>
+            
+            {/* Character symbol */}
+            <Html position={[0, 0, 0.11]} transform occlude>
+              <div style={{ 
+                fontSize: '24px', 
+                color: 'white', 
+                fontWeight: 'bold',
+                textShadow: '0 0 3px rgba(0,0,0,0.5)',
+                width: '40px',
+                height: '40px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                {characterId === 'bitcoin' && '₿'}
+                {characterId === 'ethereum' && 'Ξ'}
+                {characterId === 'dogecoin' && 'Ð'}
+                {characterId === 'pepecoin' && '🐸'}
+              </div>
+            </Html>
+          </mesh>
+          
+          {/* Body (torso) */}
+          <mesh position={[0, 0.7, 0]} castShadow>
+            <capsuleGeometry args={[0.3, 1, 16, 16]} />
+            <meshStandardMaterial color={getBodyColor()} />
+          </mesh>
+          
+          {/* Arms */}
+          <group position={[0.4, 0.7, 0]} rotation={[0, 0, Math.PI/2]}>
+            <mesh castShadow>
+              <capsuleGeometry args={[0.1, 0.7, 16, 16]} />
+              <meshStandardMaterial color="#ffdbac" /> {/* Skin tone */}
+            </mesh>
+          </group>
+          <group position={[-0.4, 0.7, 0]} rotation={[0, 0, -Math.PI/2]}>
+            <mesh castShadow>
+              <capsuleGeometry args={[0.1, 0.7, 16, 16]} />
+              <meshStandardMaterial color="#ffdbac" /> {/* Skin tone */}
             </mesh>
           </group>
           
-          {/* Character symbol */}
-          <Html position={[0, 0, 0.11]} transform occlude>
-            <div style={{ 
-              fontSize: '24px', 
-              color: 'white', 
-              fontWeight: 'bold',
-              textShadow: '0 0 3px rgba(0,0,0,0.5)',
-              width: '40px',
-              height: '40px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              {characterId === 'bitcoin' && '₿'}
-              {characterId === 'ethereum' && 'Ξ'}
-              {characterId === 'dogecoin' && 'Ð'}
-              {characterId === 'pepecoin' && '🐸'}
-            </div>
-          </Html>
-        </mesh>
-        
-        {/* Body (torso) */}
-        <mesh position={[0, 0.7, 0]} castShadow>
-          <capsuleGeometry args={[0.3, 1, 16, 16]} />
-          <meshStandardMaterial color={getBodyColor()} />
-        </mesh>
-        
-        {/* Arms */}
-        <group position={[0.4, 0.7, 0]} rotation={[0, 0, Math.PI/2]}>
-          <mesh castShadow>
-            <capsuleGeometry args={[0.1, 0.7, 16, 16]} />
-            <meshStandardMaterial color="#ffdbac" /> {/* Skin tone */}
+          {/* Legs with refs for kick animation */}
+          <mesh 
+            ref={leftLegRef} 
+            position={[0.2, 0, 0]} 
+            castShadow
+          >
+            <capsuleGeometry args={[0.12, 0.8, 16, 16]} />
+            <meshStandardMaterial color={getBodyColor()} />
+          </mesh>
+          <mesh 
+            ref={rightLegRef} 
+            position={[-0.2, 0, 0]} 
+            castShadow
+          >
+            <capsuleGeometry args={[0.12, 0.8, 16, 16]} />
+            <meshStandardMaterial color={getBodyColor()} />
           </mesh>
         </group>
-        <group position={[-0.4, 0.7, 0]} rotation={[0, 0, -Math.PI/2]}>
-          <mesh castShadow>
-            <capsuleGeometry args={[0.1, 0.7, 16, 16]} />
-            <meshStandardMaterial color="#ffdbac" /> {/* Skin tone */}
-          </mesh>
-        </group>
-        
-        {/* Legs with refs for kick animation */}
-        <mesh 
-          ref={leftLegRef} 
-          position={[0.2, 0, 0]} 
-          castShadow
-        >
-          <capsuleGeometry args={[0.12, 0.8, 16, 16]} />
-          <meshStandardMaterial color={getBodyColor()} />
-        </mesh>
-        <mesh 
-          ref={rightLegRef} 
-          position={[-0.2, 0, 0]} 
-          castShadow
-        >
-          <capsuleGeometry args={[0.12, 0.8, 16, 16]} />
-          <meshStandardMaterial color={getBodyColor()} />
-        </mesh>
-      </group>
+      )}
       
       {/* Ability effect when active */}
       {isAbilityActive && (
-        <mesh position={[0, 1, 0]}>
-          <sphereGeometry args={[1.5, 16, 16]} />
-          <meshStandardMaterial 
-            color={getCharacterColor()}
-            transparent
-            opacity={0.3}
-          />
-        </mesh>
+        <group>
+          {/* Different ability effects based on character */}
+          {characterId === 'gigachad' ? (
+            // Womanizer effect
+            <>
+              <mesh position={[0, 1, 0]}>
+                <sphereGeometry args={[1.5, 24, 24]} />
+                <meshBasicMaterial color="#ff6347" transparent opacity={0.2} />
+              </mesh>
+              <pointLight position={[0, 1, 0]} intensity={2} distance={5} color="#ff6347" />
+              {/* Heart particles */}
+              {[...Array(8)].map((_, i) => (
+                <mesh key={i} position={[
+                  Math.sin(Date.now() * 0.001 + i) * 2, 
+                  1.5 + Math.cos(Date.now() * 0.002 + i) * 0.5, 
+                  Math.cos(Date.now() * 0.001 + i) * 2
+                ]}>
+                  <sphereGeometry args={[0.1, 8, 8]} />
+                  <meshBasicMaterial color="#ff69b4" />
+                </mesh>
+              ))}
+            </>
+          ) : characterId === 'beachbaddy' ? (
+            // Captivating Presence effect
+            <>
+              <mesh position={[0, 1, 0]}>
+                <sphereGeometry args={[1.5, 24, 24]} />
+                <meshBasicMaterial color="#ff69b4" transparent opacity={0.2} wireframe />
+              </mesh>
+              <pointLight position={[0, 1, 0]} intensity={2.5} distance={6} color="#ff69b4" />
+              {/* Dazzling stars */}
+              {[...Array(10)].map((_, i) => (
+                <sprite key={i} position={[
+                  Math.sin(Date.now() * 0.002 + i * 0.5) * 2,
+                  1.5 + Math.cos(Date.now() * 0.001 + i * 0.7) * 0.7,
+                  Math.sin(Date.now() * 0.0015 + i * 0.3) * 2
+                ]} scale={[0.3, 0.3, 0.3]}>
+                  <spriteMaterial color="white" transparent opacity={0.8} />
+                </sprite>
+              ))}
+            </>
+          ) : (
+            // Default effect for crypto characters
+            <mesh position={[0, 1, 0]}>
+              <sphereGeometry args={[1.5, 16, 16]} />
+              <meshStandardMaterial 
+                color={getCharacterColor()}
+                transparent
+                opacity={0.3}
+              />
+            </mesh>
+          )}
+        </group>
       )}
       
       {/* Player name and score label */}

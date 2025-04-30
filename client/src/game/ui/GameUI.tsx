@@ -349,9 +349,9 @@ const GameUI = () => {
       
       {/* Game over dialog */}
       <Dialog open={showGameOver} onOpenChange={setShowGameOver}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="game-panel sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-center text-2xl flex items-center justify-center gap-2">
+            <DialogTitle className="game-title text-center text-2xl text-yellow-400 flex items-center justify-center gap-2 pixel-pulse">
               <Trophy className="h-6 w-6 text-yellow-500" />
               Game Over
             </DialogTitle>
@@ -359,45 +359,51 @@ const GameUI = () => {
           
           <div className="py-6">
             <div className="text-center mb-6">
-              <div className="text-xl mb-2">Final Score</div>
-              <div className="flex justify-center items-center gap-8">
-                <div>
-                  <div className="text-lg font-bold">{playerName || 'Player'}</div>
-                  <div className="text-3xl font-bold">{playerScore}</div>
+              <div className="text-xl mb-2 pixel-font text-yellow-300">Final Score</div>
+              <div className="flex justify-center items-center gap-4 sm:gap-8">
+                <div className="bg-black/60 p-2 sm:p-3 rounded-md border-2 border-yellow-500">
+                  <div className="text-sm sm:text-lg font-bold pixel-font text-blue-300">
+                    {playerName && playerName !== 'Player' ? playerName : 'You'}
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-bold game-title text-white">{playerScore}</div>
                 </div>
-                <div className="text-xl">vs</div>
-                <div>
-                  <div className="text-lg font-bold">{isMultiplayer ? (opponentName || 'Opponent') : 'AI'}</div>
-                  <div className="text-3xl font-bold">{isMultiplayer ? opponentScore : aiScore}</div>
+                <div className="text-lg sm:text-xl pixel-font text-yellow-400">vs</div>
+                <div className="bg-black/60 p-2 sm:p-3 rounded-md border-2 border-red-500">
+                  <div className="text-sm sm:text-lg font-bold pixel-font text-red-300">
+                    {isMultiplayer ? 
+                      (opponentName && opponentName !== 'Player' ? opponentName : 'Opponent') : 
+                      'AI'}
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-bold game-title text-white">{isMultiplayer ? opponentScore : aiScore}</div>
                 </div>
               </div>
               
-              <div className="mt-4 text-lg">
+              <div className="mt-6 text-base sm:text-lg pixel-font">
                 {isMultiplayer ? (
                   playerScore > opponentScore ? (
-                    <span className="text-green-500 font-bold">You win! TO THE MOON! 🚀🌕</span>
+                    <span className="text-green-400 font-bold pixel-pulse">You win! TO THE MOON! 🚀🌕</span>
                   ) : playerScore < opponentScore ? (
-                    <span className="text-red-500 font-bold">You lose! BEAR MARKET DETECTED 📉</span>
+                    <span className="text-red-400 font-bold">You lose! BEAR MARKET DETECTED 📉</span>
                   ) : (
-                    <span className="text-yellow-500 font-bold">It's a tie! HODL FOR NEXT MATCH! 💎🙌</span>
+                    <span className="text-yellow-400 font-bold">It's a tie! HODL FOR NEXT MATCH! 💎🙌</span>
                   )
                 ) : (
                   playerScore > aiScore ? (
-                    <span className="text-green-500 font-bold">You win! TO THE MOON! 🚀🌕</span>
+                    <span className="text-green-400 font-bold pixel-pulse">You win! TO THE MOON! 🚀🌕</span>
                   ) : playerScore < aiScore ? (
-                    <span className="text-red-500 font-bold">You lose! BEAR MARKET DETECTED 📉</span>
+                    <span className="text-red-400 font-bold">You lose! BEAR MARKET DETECTED 📉</span>
                   ) : (
-                    <span className="text-yellow-500 font-bold">It's a tie! HODL FOR NEXT MATCH! 💎🙌</span>
+                    <span className="text-yellow-400 font-bold">It's a tie! HODL FOR NEXT MATCH! 💎🙌</span>
                   )
                 )}
               </div>
               
-              <div className="mt-2 text-sm text-gray-500 font-medium">
+              <div className="mt-3 text-xs sm:text-sm text-white/80 font-medium pixel-font">
                 {isMultiplayer ? (
                   playerScore > opponentScore ? 
-                    `Congratulations! You defeated ${opponentName || 'opponent'} with your crypto soccer skills!` :
+                    `Congratulations! You defeated ${opponentName && opponentName !== 'Player' ? opponentName : 'your opponent'} with your crypto soccer skills!` :
                     playerScore < opponentScore ? 
-                    `${opponentName || 'Opponent'} won this time. Just HODL and try again!` :
+                    `${opponentName && opponentName !== 'Player' ? opponentName : 'Your opponent'} won this time. Just HODL and try again!` :
                     "It's a stalemate! Both crypto traders evenly matched!"
                 ) : (
                   playerScore > aiScore ? 
@@ -407,51 +413,71 @@ const GameUI = () => {
                     "Staked your coins but no yield this time. Keep HODLing!"
                 )}
               </div>
+
+              {/* Animated celebration coins for winners */}
+              {((isMultiplayer && playerScore > opponentScore) || (!isMultiplayer && playerScore > aiScore)) && (
+                <div className="mt-4 relative h-12">
+                  {[...Array(10)].map((_, i) => (
+                    <div 
+                      key={i} 
+                      className="absolute w-6 h-6 rounded-full animate-float"
+                      style={{
+                        backgroundColor: i % 3 === 0 ? '#f7931a' : i % 3 === 1 ? '#627eea' : '#c3a634',
+                        left: `${10 + (i * 8)}%`,
+                        top: i % 2 === 0 ? '0%' : '50%',
+                        animationDelay: `${i * 0.2}s`,
+                        animationDuration: `${2 + (i % 3)}s`
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
             
-            <div className="flex gap-4">
+            {/* Button container with responsive layout */}
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mt-4">
               {isMultiplayer ? (
                 <>
                   <Button 
                     onClick={handleRequestRestart}
-                    className="flex-1"
+                    className="game-button py-3 sm:py-5"
                     variant="default"
                   >
-                    Request Rematch
+                    <span className="pixel-font text-xs sm:text-sm text-blue-500">Request Rematch</span>
                   </Button>
                   
                   <Button 
                     onClick={handleRestart}
-                    className="flex-1"
+                    className="game-button py-3 sm:py-5"
                     variant="secondary"
                   >
-                    New Match
+                    <span className="pixel-font text-xs sm:text-sm text-blue-500">New Match</span>
                   </Button>
                   
                   <Button 
                     onClick={handleMenu}
-                    className="flex-1"
+                    className="game-button py-3 sm:py-5"
                     variant="outline"
                   >
-                    Main Menu
+                    <span className="pixel-font text-xs sm:text-sm text-blue-500">Main Menu</span>
                   </Button>
                 </>
               ) : (
                 <>
                   <Button 
                     onClick={handleRestart}
-                    className="flex-1"
+                    className="game-button py-3 sm:py-5 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
                     variant="default"
                   >
-                    Play Again
+                    <span className="pixel-font text-xs sm:text-sm text-blue-500">Play Again</span>
                   </Button>
                   
                   <Button 
                     onClick={handleMenu}
-                    className="flex-1"
+                    className="game-button py-3 sm:py-5"
                     variant="outline"
                   >
-                    Main Menu
+                    <span className="pixel-font text-xs sm:text-sm text-blue-500">Main Menu</span>
                   </Button>
                 </>
               )}

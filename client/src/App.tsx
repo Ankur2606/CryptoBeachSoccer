@@ -1,6 +1,7 @@
 import { Canvas } from "@react-three/fiber";
 import { Suspense, useEffect, useState } from "react";
 import { KeyboardControls } from "@react-three/drei";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { useAudio } from "./lib/stores/useAudio";
 import { useGameState } from "./lib/stores/useGameState";
 import MainMenu from "./game/screens/MainMenu";
@@ -8,6 +9,8 @@ import CharacterSelect from "./game/screens/CharacterSelect";
 import GameScreen from "./game/screens/GameScreen";
 import LoadingScreen from "./game/screens/LoadingScreen";
 import MultiplayerLobby from "./game/screens/MultiplayerLobby";
+import AuthProvider from "./auth/AuthProvider";
+import AuthCallback from "./auth/AuthCallback";
 import "@fontsource/inter";
 
 // Define control keys for the game
@@ -23,8 +26,8 @@ const controls = [
   { name: "restart", keys: ["KeyR"] },
 ];
 
-// Main App component
-function App() {
+// Game container component that handles the core game UI
+const GameContainer = () => {
   const { gameState } = useGameState();
   const [showCanvas, setShowCanvas] = useState(false);
   const { setBackgroundMusic } = useAudio();
@@ -56,6 +59,26 @@ function App() {
         </KeyboardControls>
       )}
     </div>
+  );
+};
+
+// Main App component
+function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <Routes>
+          {/* Auth callback route */}
+          <Route path="/auth/callback" element={<AuthCallback />} />
+          
+          {/* Main game routes */}
+          <Route path="/" element={<GameContainer />} />
+          
+          {/* Fallback route */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
 

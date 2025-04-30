@@ -306,14 +306,14 @@ const MultiplayerLobby = () => {
   if (gameState === 'playing' && showRestartButton) {
     return (
       <div className="absolute top-0 right-0 p-4 z-50">
-        <Card className="w-64">
+        <Card className="game-panel w-64">
           <CardHeader className="py-3">
-            <CardTitle className="text-sm font-medium">Multiplayer Game</CardTitle>
+            <CardTitle className="pixel-font text-sm font-medium text-yellow-400">Multiplayer Game</CardTitle>
           </CardHeader>
           <CardContent className="py-2">
             <Button 
               onClick={handleRestartGame}
-              className="w-full flex items-center justify-center gap-2"
+              className="game-button w-full flex items-center justify-center gap-2 pixel-font text-xs py-4"
               variant="outline"
             >
               <RefreshCw className="h-4 w-4" />
@@ -327,32 +327,32 @@ const MultiplayerLobby = () => {
   
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-blue-600 to-cyan-600 p-4">
-      <Card className="w-full max-w-md">
+      <Card className="game-panel w-full max-w-md">
         <CardHeader className="space-y-1">
           <div className="flex justify-between items-center">
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={handleBackToMenu}
-              className="flex items-center gap-1"
+              className="flex items-center gap-1 text-white hover:bg-black/20"
             >
               <ChevronLeft className="h-4 w-4" />
-              Back
+              <span className="pixel-font text-xs">Back</span>
             </Button>
             
             {isConnecting && (
-              <div className="flex items-center gap-2 text-yellow-600">
+              <div className="flex items-center gap-2 text-yellow-400">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span className="text-xs">Connecting...</span>
+                <span className="text-xs pixel-font">Connecting...</span>
               </div>
             )}
           </div>
           
-          <CardTitle className="text-2xl font-bold text-center flex justify-center items-center gap-2">
-            <Users className="h-6 w-6 text-blue-500" />
+          <CardTitle className="game-title text-2xl font-bold text-center flex justify-center items-center gap-2 text-yellow-400">
+            <Users className="h-6 w-6 text-yellow-500" />
             Crypto Beach Soccer
           </CardTitle>
-          <CardDescription className="text-center">
+          <CardDescription className="text-center pixel-font text-white">
             Play 1v1 matches with other players!
           </CardDescription>
         </CardHeader>
@@ -360,7 +360,7 @@ const MultiplayerLobby = () => {
         <CardContent>
           {error && (
             <div className="mb-4">
-              <div className="p-2 bg-red-100 border border-red-300 text-red-600 rounded-md text-sm">
+              <div className="p-3 bg-red-900/70 border-2 border-red-500 text-red-100 rounded-md text-sm pixel-font">
                 {error}
               </div>
               {error.includes('connect') && (
@@ -369,16 +369,16 @@ const MultiplayerLobby = () => {
                   size="sm" 
                   onClick={handleManualReconnect}
                   disabled={isConnecting}
-                  className="mt-2 w-full flex items-center justify-center gap-2"
+                  className="mt-2 w-full flex items-center justify-center gap-2 game-button pixel-font py-4"
                 >
                   {isConnecting ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Reconnecting...
+                      <span className="text-xs">Reconnecting...</span>
                     </>
                   ) : (
                     <>
-                      <span>🔄</span> Reconnect
+                      <span>🔄</span> <span className="text-xs">Reconnect</span>
                     </>
                   )}
                 </Button>
@@ -388,42 +388,43 @@ const MultiplayerLobby = () => {
           
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Your Name</Label>
+              <Label htmlFor="name" className="pixel-font text-yellow-300">Your Name</Label>
               <Input
                 id="name"
                 placeholder="Enter your name"
                 value={playerName}
                 onChange={(e) => setPlayerName(e.target.value)}
                 disabled={isGameStarting}
+                className="bg-black/50 border-2 border-yellow-500/50 text-white pixel-font py-6 placeholder:text-yellow-100/30"
               />
             </div>
             
             {roomCode ? (
               // Room created or joined
               <div className="space-y-4">
-                <div className="bg-blue-50 p-3 rounded-md border border-blue-200">
-                  <div className="font-medium mb-1">Room Code:</div>
-                  <div className="text-2xl font-mono tracking-wider text-center bg-white p-2 rounded border border-blue-200">
+                <div className="bg-blue-900/70 p-3 rounded-md border-2 border-blue-400">
+                  <div className="font-medium mb-1 pixel-font text-blue-300">Room Code:</div>
+                  <div className="text-2xl font-mono tracking-wider text-center bg-black/50 p-3 rounded border-2 border-yellow-200 text-yellow-300">
                     {roomCode}
                   </div>
-                  <div className="text-xs text-center mt-1 text-blue-500">
+                  <div className="text-xs text-center mt-2 text-blue-200 pixel-font">
                     Share this code with your friend
                   </div>
                 </div>
                 
                 {peerName && (
-                  <div className="bg-green-50 p-3 rounded-md border border-green-200">
-                    <div className="font-medium mb-1">
+                  <div className="bg-green-900/70 p-3 rounded-md border-2 border-green-400">
+                    <div className="font-medium mb-1 pixel-font text-green-300">
                       {websocketService.isHost ? 'Guest' : 'Host'}:
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="font-medium">{peerName}</span>
+                      <span className="font-medium text-white pixel-font">{peerName}</span>
                       {isPeerReady ? (
-                        <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
+                        <span className="text-xs bg-green-700 text-green-100 px-3 py-1 rounded-full pixel-font">
                           Ready
                         </span>
                       ) : (
-                        <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full">
+                        <span className="text-xs bg-yellow-700 text-yellow-100 px-3 py-1 rounded-full pixel-font">
                           Not Ready
                         </span>
                       )}
@@ -434,24 +435,24 @@ const MultiplayerLobby = () => {
                 {!isReady && peerName && (
                   <Button 
                     onClick={handleReady} 
-                    className="w-full"
+                    className="game-button w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 py-5"
                     disabled={isGameStarting}
                   >
-                    I'm Ready To Play
+                    <span className="pixel-font text-sm">I'm Ready To Play</span>
                   </Button>
                 )}
                 
                 {isReady && (
-                  <div className="bg-green-50 p-3 rounded-md border border-green-200 text-center">
+                  <div className="bg-green-900/70 p-3 rounded-md border-2 border-green-400 text-center">
                     {isGameStarting ? (
                       <div className="flex flex-col items-center justify-center gap-2">
-                        <Loader2 className="h-5 w-5 animate-spin text-green-600" />
-                        <span>Starting game...</span>
+                        <Loader2 className="h-5 w-5 animate-spin text-green-300" />
+                        <span className="pixel-font text-green-300">Starting game...</span>
                       </div>
                     ) : (
                       <>
-                        <span className="text-green-700">You are ready!</span>
-                        <div className="text-xs text-green-600 mt-1">
+                        <span className="pixel-font text-green-300">You are ready!</span>
+                        <div className="text-xs pixel-font text-green-200 mt-2">
                           {isPeerReady 
                             ? "Both players ready, game starting..." 
                             : "Waiting for other player..."}
@@ -462,8 +463,8 @@ const MultiplayerLobby = () => {
                 )}
                 
                 {!peerName && websocketService.isHost && (
-                  <div className="bg-yellow-50 p-3 rounded-md border border-yellow-200 text-center">
-                    <span className="text-yellow-700">Waiting for player to join...</span>
+                  <div className="bg-yellow-900/70 p-3 rounded-md border-2 border-yellow-400 text-center">
+                    <span className="pixel-font text-yellow-300">Waiting for player to join...</span>
                   </div>
                 )}
                 
@@ -471,7 +472,7 @@ const MultiplayerLobby = () => {
                 {peerName && gameState !== 'playing' && (
                   <Button 
                     onClick={handleRestartGame}
-                    className="w-full mt-4 flex items-center justify-center gap-2"
+                    className="game-button w-full mt-4 flex items-center justify-center gap-2 py-5 pixel-font text-sm"
                     variant="outline"
                     disabled={!isReady || !isPeerReady}
                   >
@@ -487,49 +488,50 @@ const MultiplayerLobby = () => {
                 onValueChange={setActiveTab}
                 className="w-full"
               >
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="host">Create Game</TabsTrigger>
-                  <TabsTrigger value="join">Join Game</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-2 bg-black/40">
+                  <TabsTrigger value="host" className="pixel-font text-xs py-3 tab-trigger">Create Game</TabsTrigger>
+                  <TabsTrigger value="join" className="pixel-font text-xs py-3 tab-trigger">Join Game</TabsTrigger>
                 </TabsList>
                 
-                <TabsContent value="host" className="space-y-4 mt-4">
-                  <div className="text-center text-sm text-gray-500 mb-4">
+                <TabsContent value="host" className="space-y-4 mt-4 tab-content">
+                  <div className="text-center text-sm text-white/80 pixel-font mb-4">
                     Create a new game and invite a friend to join!
                   </div>
                   
                   <Button 
                     onClick={handleCreateRoom} 
-                    className="w-full"
+                    className="game-button w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 py-5"
                     disabled={!playerName || isConnecting}
                   >
-                    Create Room
+                    <span className="pixel-font text-sm">Create Room</span>
                   </Button>
                 </TabsContent>
                 
-                <TabsContent value="join" className="space-y-4 mt-4">
+                <TabsContent value="join" className="space-y-4 mt-4 tab-content">
                   <div className="space-y-2">
-                    <Label htmlFor="roomCode">Room Code</Label>
+                    <Label htmlFor="roomCode" className="pixel-font text-yellow-300">Room Code</Label>
                     <Input
                       id="roomCode"
                       placeholder="Enter code from host"
                       value={roomToJoin}
                       onChange={(e) => setRoomToJoin(e.target.value)}
                       disabled={isJoining}
+                      className="bg-black/50 border-2 border-yellow-500/50 text-white pixel-font py-6 placeholder:text-yellow-100/30"
                     />
                   </div>
                   
                   <Button 
                     onClick={handleJoinRoom} 
-                    className="w-full"
+                    className="game-button w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 py-5"
                     disabled={!playerName || !roomToJoin || isConnecting || isJoining}
                   >
                     {isJoining ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Joining...
+                        <span className="pixel-font text-sm">Joining...</span>
                       </>
                     ) : (
-                      'Join Game'
+                      <span className="pixel-font text-sm">Join Game</span>
                     )}
                   </Button>
                 </TabsContent>
@@ -538,8 +540,8 @@ const MultiplayerLobby = () => {
           </div>
         </CardContent>
         
-        <CardFooter className="flex justify-center border-t pt-4">
-          <div className="text-xs text-gray-500 flex items-center gap-1">
+        <CardFooter className="flex justify-center border-t border-white/20 pt-4">
+          <div className="text-xs text-yellow-200/70 flex items-center gap-1 pixel-font">
             <Coins className="h-3 w-3" />
             <span>Crypto Beach Soccer Multiplayer v1.0</span>
           </div>
