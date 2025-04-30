@@ -39,12 +39,16 @@ class WebSocketService {
         return;
       }
       
-      // Get the current host and port
-      const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-      const host = window.location.host;
-      
-      // Create WebSocket connection with the specific path
-      this.socket = new WebSocket(`${protocol}://${host}/ws/game`);
+      // Get the WebSocket URL using our helper function
+      try {
+        const wsUrl = getWebSocketUrl();
+        console.log(`Attempting to connect to WebSocket at: ${wsUrl}`);
+        this.socket = new WebSocket(wsUrl);
+      } catch (err) {
+        console.error('Error constructing WebSocket URL:', err);
+        resolve(false);
+        return;
+      }
       
       // Connection opened
       this.socket.addEventListener('open', () => {
@@ -245,3 +249,10 @@ export const websocketService = new WebSocketService();
 
 // Export default for convenience
 export default websocketService;
+
+// Helper function to get correct WebSocket URL based on environment
+export function getWebSocketUrl() {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const host = window.location.host;
+  return `${protocol}//${host}/ws/game`;
+}
