@@ -69,6 +69,162 @@ const Goals = () => {
         }
       }
     });
+    
+    // Add invisible barriers to prevent ball from getting stuck in inaccessible areas
+    
+    // === PLAYER'S GOAL BARRIERS ===
+    // Left side barrier - vertical wall
+    addBody({
+      position: [-3.7, 2, 13], // Positioned just outside the left goal post shadow
+      type: 'static',
+      shape: 'box',
+      width: 1.5, // Barrier width
+      height: 4,  // Height to prevent ball from jumping over
+      depth: 3,   // Depth to cover the area near the goal post
+      material: {
+        friction: 0.1,
+        restitution: 0.7 // Bouncy to push ball back into play
+      },
+      userData: {
+        type: 'barrier',
+        id: 'player_goal_left_barrier'
+      }
+    });
+    
+    // Right side barrier - vertical wall
+    addBody({
+      position: [3.7, 2, 13], // Positioned just outside the right goal post shadow
+      type: 'static',
+      shape: 'box',
+      width: 1.5,
+      height: 4,
+      depth: 3,
+      material: {
+        friction: 0.1,
+        restitution: 0.7
+      },
+      userData: {
+        type: 'barrier',
+        id: 'player_goal_right_barrier'
+      }
+    });
+    
+    // Left corner diagonal barrier (to prevent ball from getting stuck in corner)
+    addBody({
+      position: [-4.5, 2, 12], 
+      type: 'static',
+      shape: 'box',
+      width: 2,
+      height: 4,
+      depth: 2,
+      rotation: [0, Math.PI/4, 0], // Rotated 45 degrees to make a diagonal block
+      material: {
+        friction: 0.1,
+        restitution: 0.7
+      },
+      userData: {
+        type: 'barrier',
+        id: 'player_goal_left_corner'
+      }
+    });
+    
+    // Right corner diagonal barrier
+    addBody({
+      position: [4.5, 2, 12],
+      type: 'static',
+      shape: 'box',
+      width: 2,
+      height: 4,
+      depth: 2,
+      rotation: [0, -Math.PI/4, 0], // Rotated -45 degrees
+      material: {
+        friction: 0.1,
+        restitution: 0.7
+      },
+      userData: {
+        type: 'barrier',
+        id: 'player_goal_right_corner'
+      }
+    });
+    
+    // === AI'S GOAL BARRIERS ===
+    // Left side barrier - vertical wall
+    addBody({
+      position: [-3.7, 2, -13], // Positioned just outside the left goal post shadow
+      type: 'static',
+      shape: 'box',
+      width: 1.5,
+      height: 4,
+      depth: 3,
+      material: {
+        friction: 0.1,
+        restitution: 0.7
+      },
+      userData: {
+        type: 'barrier',
+        id: 'ai_goal_left_barrier'
+      }
+    });
+    
+    // Right side barrier - vertical wall
+    addBody({
+      position: [3.7, 2, -13], // Positioned just outside the right goal post shadow
+      type: 'static',
+      shape: 'box',
+      width: 1.5,
+      height: 4,
+      depth: 3,
+      material: {
+        friction: 0.1,
+        restitution: 0.7
+      },
+      userData: {
+        type: 'barrier',
+        id: 'ai_goal_right_barrier'
+      }
+    });
+    
+    // Left corner diagonal barrier
+    addBody({
+      position: [-4.5, 2, -12],
+      type: 'static',
+      shape: 'box',
+      width: 2,
+      height: 4,
+      depth: 2,
+      rotation: [0, -Math.PI/4, 0], // Rotated -45 degrees
+      material: {
+        friction: 0.1,
+        restitution: 0.7
+      },
+      userData: {
+        type: 'barrier',
+        id: 'ai_goal_left_corner'
+      }
+    });
+    
+    // Right corner diagonal barrier
+    addBody({
+      position: [4.5, 2, -12],
+      type: 'static',
+      shape: 'box',
+      width: 2,
+      height: 4,
+      depth: 2,
+      rotation: [0, Math.PI/4, 0], // Rotated 45 degrees
+      material: {
+        friction: 0.1,
+        restitution: 0.7
+      },
+      userData: {
+        type: 'barrier',
+        id: 'ai_goal_right_corner'
+      }
+    });
+    
+    // Log for debugging
+    console.log("🚧 Added goal barrier physics to prevent ball from getting stuck");
+    
   }, [addBody, incrementAIScore, incrementPlayerScore]);
   
   return (

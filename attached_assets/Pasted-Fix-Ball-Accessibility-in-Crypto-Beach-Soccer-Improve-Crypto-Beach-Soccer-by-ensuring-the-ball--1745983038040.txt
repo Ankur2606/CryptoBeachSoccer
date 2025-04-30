@@ -1,0 +1,72 @@
+Fix Ball Accessibility in "Crypto Beach Soccer"
+Improve "Crypto Beach Soccer" by ensuring the ball does not become inaccessible near the goal posts. Currently, the ball can move to the sides of the goal, beyond the goal post's shadow, where players cannot reach it, making the game unplayable at times. Use the goal post's shadow as a reference to prevent the ball from reaching these inaccessible areas.
+Issue
+
+The ball gets stuck on the sides of the goal, beyond the shadow of the goal posts, where players cannot access it, disrupting gameplay.
+
+Solution
+Add invisible barriers using Cannon.js static bodies to restrict the ball’s movement. Position these barriers based on the goal post’s shadow to block the ball from moving to the sides of the goal, ensuring it stays within the playable area or passes through the goal net only.
+Steps to Implement
+
+Create Invisible Barriers:
+
+Use Cannon.js to create static bodies (e.g., planes or boxes) as invisible walls.
+Position the barriers just outside the goal post’s shadow on both sides of each goal to block the ball from entering inaccessible areas.
+Set the barriers’ height to at least twice the ball’s maximum jump height to prevent it from going over.
+Extend the barriers’ width to cover the full side area beyond the goal posts.
+
+
+Configure Collision Filters:
+
+Set up Cannon.js collision filters so:
+The ball collides with the barriers and bounces back into the playable area.
+Players do not collide with the barriers (if needed, based on game design).
+
+
+Adjust the ball’s restitution (e.g., 0.5 or higher) to ensure it bounces naturally off the barriers.
+
+
+Use Goal Post Shadow as Reference:
+
+Position the barriers slightly outside the shadow’s edge to mark the boundary beyond which the ball cannot pass.
+Align the barriers with the field’s layout for a consistent playable area.
+
+
+Ensure Barriers Are Invisible:
+
+Avoid rendering the barriers in Three.js (no meshes) or use a fully transparent material.
+This keeps the game’s visual appearance unchanged.
+
+
+Tune Ball Physics:
+
+Adjust the ball’s physics properties (e.g., friction, restitution) to ensure smooth interaction with the barriers.
+Maintain natural and responsive ball movement within the new boundaries.
+
+
+Test and Debug:
+
+Temporarily add debug visuals (e.g., semi-transparent barriers) to confirm their positions.
+Test to ensure:
+The ball cannot reach the sides of the goal beyond the shadow.
+The ball bounces back correctly when hitting the barriers.
+Players can still access the ball near the goal.
+
+
+Remove debug visuals after verification.
+
+
+
+Additional Notes
+
+Ensure barriers do not disrupt other elements (e.g., goal nets, player movement).
+If clipping occurs, refine the physics timestep or solver iterations in Cannon.js.
+Optimize barrier shapes and positions for performance.
+
+Expected Result
+
+The ball stays within the playable area, unable to get stuck on the sides of the goal beyond the shadow.
+Players can always reach the ball, maintaining smooth and fair gameplay.
+The solution integrates seamlessly without altering the game’s visuals.
+
+Implement these steps carefully, testing each change to confirm the issue is resolved without introducing new problems.
