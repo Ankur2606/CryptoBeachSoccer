@@ -1,0 +1,68 @@
+Prompt for AI Agent: Develop "Crypto Beach Soccer"
+Develop a 3D web-based soccer game titled "Crypto Beach Soccer" using Three.js for rendering, Cannon.js for physics, and plain JavaScript for game logic. The game is a 1v1 soccer match inspired by Big Head Football, featuring blockchain meme concepts, and is themed around a beach setting. It must be playable on both desktop and mobile devices and optimized for vibe coding, with at least 80% AI-generated or AI-assisted code for the Orange Vibe Jam hackathon.
+Game Specifications
+Overview
+
+Title: Crypto Beach Soccer
+Concept: Players control characters with large cryptocurrency coin heads and beach-attired bodies, kicking a meme ball (Pepe the Frog) on a beach field. The game is single-player against an AI opponent, with each character having a unique crypto-inspired ability.
+Objective: Score more goals than the opponent in a 3-minute match by kicking the ball into their net.
+
+Features
+
+Graphics: Use Three.js for 3D rendering. Create a 2.5D game (3D visuals, 2D movement plane) with pixelated or low-poly models for:
+Beach field (sand texture, palm trees, beach goals made of driftwood or umbrellas).
+Characters with big crypto coin heads and small bodies in beach attire.
+Meme ball (3D Pepe the Frog model).
+
+
+Physics: Use Cannon.js for ball movement, collisions, and basic player-ball interactions.
+Gameplay:
+Players move left/right, jump, and kick the ball.
+3-minute matches; highest score wins.
+
+
+Controls:
+Desktop: Left/Right arrows (move), Up arrow (jump), Spacebar (kick), ‘E’ (ability).
+Mobile: On-screen touch buttons for move, jump, kick, and ability.
+
+
+Characters: Include at least 4 selectable characters:
+Bitcoin (BTC): Golden coin head, male body in orange swim trunks + sunglasses. Ability: "Hodl" (immovable for 3s, cooldown 15s).
+Ethereum (ETH): Silver coin head, female body in purple bikini + flip-flops. Ability: "Smart Contract" (spawns a barrier for 3s, cooldown 15s).
+Dogecoin (DOGE): Bronze coin head with Shiba Inu, male body in red swimsuit. Ability: "To the Moon" (speed boost for 5s, cooldown 15s).
+PepeCoin (PEPE): Green coin head, female body in green frog-patterned swimsuit. Ability: "Meme Magic" (reverses opponent controls for 3s, cooldown 15s).
+
+
+AI Opponent: Simple AI that chases the ball and kicks toward the player’s goal.
+Login System:
+
+Add a guest login option where players enter a username to play instantly (no progress saved).
+
+
+UI: Simple interface with:
+Main menu (play, character select, login options).
+In-game HUD (score, timer, ability cooldown).
+
+
+
+Technical Requirements
+
+Platform: Web-based, responsive for desktop and mobile.
+Tech Stack: Three.js, Cannon.js, plain JavaScript.
+Assets: Generate or use simple 3D models/textures for characters, ball, and field.
+Code: At least 80% AI-written or AI-assisted, suitable for hackathon submission.
+
+Deliverables
+Provide complete code including:
+
+HTML: Base structure with Three.js and Cannon.js CDN links.
+CSS: Responsive styling for desktop/mobile.
+JavaScript: Game logic, rendering, physics, controls, AI, and login integration.
+Any necessary assets (e.g., textures or model references).
+
+Notes
+
+Keep development simple for quick AI execution (e.g., basic shapes for models, minimal animations).
+Ensure the game is fun with quirky blockchain meme vibes and beach flair.
+Prioritize core gameplay (movement, kicking, scoring) before adding abilities and login features.
+

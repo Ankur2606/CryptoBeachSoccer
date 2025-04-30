@@ -1,0 +1,71 @@
+
+### Game Concept Documentation
+
+#### **Game Title**
+Crypto Beach Soccer
+
+#### **Overview**
+"Crypto Beach Soccer" is a web-based, 1v1 soccer game that combines the quirky mechanics of Big Head Football with a blockchain meme twist. Players control characters with oversized cryptocurrency coin heads and beach-attired bodies, kicking around a meme-inspired football (e.g., Pepe the Frog). Set on a vibrant beach field, the game features simple yet engaging gameplay, unique character abilities tied to crypto memes, and a responsive design playable on both desktop and mobile devices. Built with Three.js for 3D visuals and Cannon.js for physics, it’s optimized for vibe coding and AI-assisted development, targeting at least 80% AI-generated code for the Orange Vibe Jam hackathon.
+
+#### **Theme**
+- **Setting**: A sunny beach with sand, palm trees, and beach-themed goals (e.g., driftwood or umbrellas).
+- **Characters**: Players have large crypto coin heads (e.g., Bitcoin, Ethereum) and small bodies in beach attire. One character is styled as male (e.g., swim trunks), and the opponent as female (e.g., bikini or swimsuit), though coin heads remain gender-neutral.
+- **Football**: A 3D meme character, specifically Pepe the Frog, adding humor and blockchain culture.
+
+#### **Gameplay**
+- **Objective**: Score more goals than your opponent by kicking the meme ball into their net within a 3-minute match.
+- **Mode**: Single-player against an AI opponent.
+- **Controls**:
+  - **Desktop**: Arrow keys (left/right movement, up to jump), spacebar (kick), and ‘E’ key (special ability).
+  - **Mobile**: On-screen touch buttons for movement, jump, kick, and ability.
+- **Mechanics**:
+  - Players move left/right, jump, and kick the ball.
+  - Each character has a unique special ability with a cooldown (e.g., 15 seconds), inspired by crypto memes or coin traits.
+  - The beach field is a 2.5D plane (3D visuals, 2D movement) with simple physics for ball collisions and bounces.
+
+#### **Characters**
+Players choose one character from a roster of four crypto coins, each with distinct abilities and beach attire:
+1. **Bitcoin (BTC)**:
+   - **Head**: Golden coin with Bitcoin symbol.
+   - **Body**: Male, wearing orange swim trunks and sunglasses.
+   - **Ability**: "Hodl" – Becomes immovable for 3 seconds, blocking the opponent or ball.
+2. **Ethereum (ETH)**:
+   - **Head**: Silver coin with Ethereum logo.
+   - **Body**: Female, wearing a purple bikini and flip-flops.
+   - **Ability**: "Smart Contract" – Spawns a temporary barrier to block the ball or opponent.
+3. **Dogecoin (DOGE)**:
+   - **Head**: Bronze coin with Shiba Inu face.
+   - **Body**: Male, wearing a red lifeguard-style swimsuit.
+   - **Ability**: "To the Moon" – Gains a 5-second speed boost.
+4. **PepeCoin (PEPE)**:
+   - **Head**: Green coin with Pepe face.
+   - **Body**: Female, wearing a green one-piece swimsuit with frog patterns.
+   - **Ability**: "Meme Magic" – Reverses opponent’s controls for 3 seconds.
+
+#### **Rules**
+- Matches last 3 minutes; the player with the most goals wins.
+- If tied, the game ends in a draw (or sudden-death overtime could be an optional feature).
+- Special abilities recharge every 15 seconds and add strategic depth to scoring or defending.
+- The AI opponent mirrors the player’s mechanics but uses basic logic (e.g., chase ball, kick toward goal).
+
+#### **Technical Details**
+- **Platform**: Web-based, mobile-friendly.
+- **Tech Stack**:
+  - Three.js for 3D rendering and player mobility.
+  - Cannon.js for physics (ball movement, collisions).
+  - Plain JavaScript for game logic.
+- **Graphics**: Pixelated or low-poly 3D models for characters, ball, and field to keep development simple.
+- **Login**:
+  - Orange ID integration for user authentication and saved progress/leaderboards.
+  - Guest login with a username for instant play without saving.
+
+#### **Unique Features**
+- **Blockchain Meme Fusion**: Crypto coin characters and a meme ball tie into Web3 culture.
+- **Beach Vibe**: A playful, summery aesthetic with quirky, big-headed characters in beach gear.
+- **Abilities**: Crypto-inspired powers make each character feel distinct and fun.
+- **Hackathon Fit**: Designed for AI-assisted coding, with Orange ID integration and optional ORNG currency potential.
+
+#### **Future Enhancements (Optional)**
+- Multiplayer mode via WebRTC.
+- ORNG currency to unlock characters or skins.
+- Additional characters (e.g., Solana, Ripple) or meme balls (e.g., Doggo).
