@@ -4,9 +4,10 @@ import { useCharacter } from '@/lib/stores/useCharacter';
 import { useAudio } from '@/lib/stores/useAudio';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Trophy, VolumeX, Volume2, TrendingUp, Coins, Zap, ArrowUp } from 'lucide-react';
+import { Trophy, VolumeX, Volume2, TrendingUp, Coins, Zap, ArrowUp, RefreshCw } from 'lucide-react';
 import { characterData } from '../models/character';
 import { AbilityType } from '../components/Abilities';
+import { websocketService } from '@/lib/multiplayer/websocketService';
 
 // Crypto-themed puns and memes for random display
 const CRYPTO_PUNS = [
@@ -48,6 +49,7 @@ const GameUI = () => {
   // Active crypto ability states for UI display
   const [activeAbilityType, setActiveAbilityType] = useState<AbilityType | null>(null);
   const [abilityTimeRemaining, setAbilityTimeRemaining] = useState(0);
+  const [error, setError] = useState<string | null>(null);
   
   // Crypto pun notification system
   const [currentPun, setCurrentPun] = useState<string>("");
@@ -163,21 +165,53 @@ const GameUI = () => {
   const handleRequestRestart = () => {
     if (!isMultiplayer) return;
     
+    // Clean up any existing listeners first to avoid duplicates
+    websocketService.off('game-restart', () => {});
+    websocketService.off('error', () => {});
+    
     // Send restart request to server
     websocketService.requestRestart();
     
     // Show a requesting state
-    setError('Restart requested...');
+    setError('Rematch requested... Waiting for response...');
+    
+    // Set up a timeout to clear the message after 5 seconds
+    const errorTimeout = setTimeout(() => {
+      setError(null);
+    }, 5000);
     
     // Set up listener for server response
-    websocketService.on('game-restart', (message) => {
+    websocketService.on('game-restart', (message: { type: string, data: any }) => {
       console.log('Game restart message received:', message);
-      resetGame();
-      setGameState('multiplayer_lobby');
-      setShowGameOver(false);
+      
+      // Clear any error message
+      clearTimeout(errorTimeout);
+      setError(`${message.data.requestedBy || 'Opponent'} requested restart. Returning to lobby...`);
+      
+      // After a brief delay, reset the game and go to lobby
+      setTimeout(() => {
+        resetGame();
+        setGameState('multiplayer_lobby');
+        setShowGameOver(false);
+        setError(null);
+      }, 2000);
       
       // Remove listener to avoid duplicates
       websocketService.off('game-restart', () => {});
+    });
+    
+    // Set up error listener
+    websocketService.on('error', (message: { type: string, data: any }) => {
+      clearTimeout(errorTimeout);
+      setError(`Error: ${message.data.message || 'Could not restart game'}`);
+      
+      // Clear error message after 5 seconds
+      setTimeout(() => {
+        setError(null);
+      }, 5000);
+      
+      // Remove listener
+      websocketService.off('error', () => {});
     });
   };
   
@@ -208,18 +242,33 @@ const GameUI = () => {
             </div>
           </div>
           
-          <div className="bg-black/50 backdrop-blur-sm py-1 px-3 rounded-md text-white font-bold">
-            {formatTime(180 - gameTime)} {/* 3-minute timer */}
+          <div className="flex items-center gap-2">
+            <div className="bg-black/50 backdrop-blur-sm py-1 px-3 rounded-md text-white font-bold">
+              {formatTime(180 - gameTime)} {/* 3-minute timer */}
+            </div>
+            
+            {/* Restart button for multiplayer games */}
+            {isMultiplayer && (
+              <Button 
+                variant="ghost" 
+                size="sm"
+                className="bg-black/40 text-white rounded-md pointer-events-auto flex items-center gap-1"
+                onClick={handleRequestRestart}
+              >
+                <RefreshCw size={14} />
+                <span className="text-xs">Restart</span>
+              </Button>
+            )}
+            
+            <Button 
+              variant="ghost" 
+              size="icon"
+              className="bg-black/40 text-white rounded-full pointer-events-auto"
+              onClick={toggleMute}
+            >
+              {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+            </Button>
           </div>
-          
-          <Button 
-            variant="ghost" 
-            size="icon"
-            className="bg-black/40 text-white rounded-full pointer-events-auto"
-            onClick={toggleMute}
-          >
-            {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
-          </Button>
         </div>
         
         {/* Crypto Pun Notification */}
@@ -228,6 +277,16 @@ const GameUI = () => {
             <div className="bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-500 text-black font-bold py-3 px-6 rounded-lg text-xl animate-bounce shadow-lg flex items-center gap-2">
               <Coins className="h-6 w-6" />
               {currentPun}
+            </div>
+          </div>
+        )}
+        
+        {/* Error/Status Notification */}
+        {error && (
+          <div className="fixed top-1/3 inset-x-0 flex justify-center items-center">
+            <div className="bg-black/80 text-white font-medium py-2 px-4 rounded-md shadow-lg flex items-center gap-2 z-50">
+              <RefreshCw className="h-4 w-4 animate-spin" />
+              {error}
             </div>
           </div>
         )}
@@ -351,21 +410,51 @@ const GameUI = () => {
             </div>
             
             <div className="flex gap-4">
-              <Button 
-                onClick={handleRestart}
-                className="flex-1"
-                variant="default"
-              >
-                Play Again
-              </Button>
-              
-              <Button 
-                onClick={handleMenu}
-                className="flex-1"
-                variant="outline"
-              >
-                Main Menu
-              </Button>
+              {isMultiplayer ? (
+                <>
+                  <Button 
+                    onClick={handleRequestRestart}
+                    className="flex-1"
+                    variant="default"
+                  >
+                    Request Rematch
+                  </Button>
+                  
+                  <Button 
+                    onClick={handleRestart}
+                    className="flex-1"
+                    variant="secondary"
+                  >
+                    New Match
+                  </Button>
+                  
+                  <Button 
+                    onClick={handleMenu}
+                    className="flex-1"
+                    variant="outline"
+                  >
+                    Main Menu
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button 
+                    onClick={handleRestart}
+                    className="flex-1"
+                    variant="default"
+                  >
+                    Play Again
+                  </Button>
+                  
+                  <Button 
+                    onClick={handleMenu}
+                    className="flex-1"
+                    variant="outline"
+                  >
+                    Main Menu
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </DialogContent>
