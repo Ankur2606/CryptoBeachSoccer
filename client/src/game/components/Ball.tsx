@@ -3,7 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { usePhysics } from "@/lib/stores/usePhysics";
 import { useAudio } from "@/lib/stores/useAudio";
 import * as THREE from "three";
-import { FIELD_WIDTH, FIELD_DEPTH } from "../constants";
+import { FIELD_WIDTH, FIELD_DEPTH, GRAVITY } from "../constants";
 
 const Ball = () => {
   const ballRef = useRef<THREE.Mesh>(null);
@@ -19,7 +19,8 @@ const Ball = () => {
     stuckTime: 0,
     lastResetTime: 0,
     isResetting: false,
-    positionHistory: [] as THREE.Vector3[]
+    positionHistory: [] as THREE.Vector3[],
+    earthGravityApplied: false // Track if earth gravity has been applied
   });
   
   // Manual ball reset function
@@ -78,7 +79,7 @@ const Ball = () => {
       // Create the ball body in the physics world with improved properties
       addBody({
         position: [0, 0.5, 0],
-        mass: 0.8, // Slightly reduced mass for better control
+        mass: 0.45, // Standard soccer ball mass (450g) - more realistic for Earth gravity
         shape: 'sphere',
         radius: 0.5,
         material: {
@@ -112,7 +113,7 @@ const Ball = () => {
         }
       });
       
-      console.log("⚽ Ball physics initialized with improved properties");
+      console.log("⚽ Ball physics initialized with earth-like gravity properties");
     }
   }, [addBody, playHit, getBody]);
   
@@ -126,6 +127,21 @@ const Ball = () => {
       // Update visual mesh with physics data
       ballRef.current.position.copy(position as THREE.Vector3);
       ballRef.current.quaternion.copy(quaternion as THREE.Quaternion);
+      
+      // Ensure Earth-like gravity is constantly applied
+      // This ensures gravity feels consistent even with other forces
+      if (!ballStateRef.current.earthGravityApplied) {
+        // Apply precise Earth gravity force manually
+        // Note: The world already has gravity, this is for fine-tuning ball behavior
+        const gravityForce = new THREE.Vector3(0, GRAVITY * ballBody.mass, 0);
+        applyForce(ballBody, [0, gravityForce.y, 0]);
+        ballStateRef.current.earthGravityApplied = true;
+        
+        // Reset flag after a short time to reapply gravity consistently
+        setTimeout(() => {
+          ballStateRef.current.earthGravityApplied = false;
+        }, 100);
+      }
       
       // Enhanced boundary enforcement system
       const halfWidth = FIELD_WIDTH/2 - 0.5; // Reduced to keep ball further from edge
@@ -217,6 +233,14 @@ const Ball = () => {
           // Reset stuck timer
           ballStateRef.current.stuckTime = 0;
         }
+      }
+      
+      // Add earth-like gravity behavior: Ball should eventually come to rest
+      // If ball is very close to ground and moving slowly, gradually slow it down
+      if (position.y < 0.6 && Math.abs(ballBody.velocity.y) < 0.5) {
+        // Gradually reduce velocity when ball is on ground to simulate natural rest
+        ballBody.velocity.x *= 0.98;
+        ballBody.velocity.z *= 0.98;
       }
       
       // Reset ball if it falls off the field or gets stuck

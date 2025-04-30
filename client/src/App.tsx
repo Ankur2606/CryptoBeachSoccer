@@ -12,11 +12,15 @@ import "@fontsource/inter";
 
 // Define control keys for the game
 const controls = [
+  { name: "forward", keys: ["KeyW", "ArrowUp"] },
+  { name: "backward", keys: ["KeyS", "ArrowDown"] },
   { name: "left", keys: ["KeyA", "ArrowLeft"] },
   { name: "right", keys: ["KeyD", "ArrowRight"] },
   { name: "jump", keys: ["KeyW", "ArrowUp"] },
+  { name: "shiftJump", keys: ["ShiftLeft", "ShiftRight"] },
   { name: "kick", keys: ["Space"] },
   { name: "ability", keys: ["KeyE"] },
+  { name: "restart", keys: ["KeyR"] },
 ];
 
 // Main App component
@@ -27,7 +31,7 @@ function App() {
 
   // Load background music
   useEffect(() => {
-    const bgMusic = new Audio("/sounds/background.mp3");
+    const bgMusic = new Audio("/sounds/background2.mp3");
     bgMusic.loop = true;
     bgMusic.volume = 0.3;
     setBackgroundMusic(bgMusic);

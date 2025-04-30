@@ -15,15 +15,17 @@ const PlayerController = ({ character }: { character: string }) => {
   const { getBody, applyForce } = usePhysics();
   const { activateAbility, isAbilityActive, cooldownRemaining } = useCharacter();
   const { playHit, playSuccess } = useAudio();
-  const { gameState } = useGameState();
+  const { gameState, resetGame } = useGameState();
   
   // Active crypto ability states
   const [activeAbility, setActiveAbility] = useState<AbilityType | null>(null);
   const [abilityTimeRemaining, setAbilityTimeRemaining] = useState(0);
   
-  // Speed/jump multipliers for abilities
+  // Speed/jump/kick multipliers for abilities - increased base values for more impact
   const [speedMultiplier, setSpeedMultiplier] = useState(1.0);
   const [jumpMultiplier, setJumpMultiplier] = useState(1.0);
+  const [kickMultiplier, setKickMultiplier] = useState(1.0);
+  const [ballControlRadius, setBallControlRadius] = useState(4); // Default ball control radius
   const [isInvincible, setIsInvincible] = useState(false);
   
   const kickCooldownRef = useRef(0);
@@ -39,13 +41,19 @@ const PlayerController = ({ character }: { character: string }) => {
     
     // Debug keyboard input
     const handleKeyDown = (e: KeyboardEvent) => {
-      console.log("Key down:", e.code);
+      // Add R key as game restart
+      if (e.code === 'KeyR') {
+        console.log("🔄 R key pressed - restarting game");
+        resetGame();
+      }
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Key down:", e.code);
+      }
     };
     
-    // Add debug event listener
-    if (process.env.NODE_ENV === 'development') {
-      window.addEventListener('keydown', handleKeyDown);
-    }
+    // Add event listeners
+    window.addEventListener('keydown', handleKeyDown);
     
     // Handle ability collection event
     const handleAbilityCollected = (event: Event) => {
@@ -64,9 +72,7 @@ const PlayerController = ({ character }: { character: string }) => {
     window.addEventListener('ability-collected', handleAbilityCollected);
     
     return () => {
-      if (process.env.NODE_ENV === 'development') {
-        window.removeEventListener('keydown', handleKeyDown);
-      }
+      window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('ability-collected', handleAbilityCollected);
       
       // Clean up any active ability effects on unmount
@@ -74,9 +80,9 @@ const PlayerController = ({ character }: { character: string }) => {
         clearTimeout(abilityEffectRef.current);
       }
     };
-  }, [character, playSuccess]);
+  }, [character, playSuccess, resetGame]);
   
-  // Apply the specific crypto ability effect
+  // Apply the specific crypto ability effect - significantly enhanced
   const applyAbilityEffect = (type: AbilityType, duration: number) => {
     // Clear any existing effects
     if (abilityEffectRef.current) {
@@ -87,25 +93,49 @@ const PlayerController = ({ character }: { character: string }) => {
     setActiveAbility(type);
     setAbilityTimeRemaining(duration);
     
-    // Apply effects based on ability type
+    // Reset all multipliers before applying new ones
+    setSpeedMultiplier(1.0);
+    setJumpMultiplier(1.0);
+    setKickMultiplier(1.0);
+    setBallControlRadius(4);
+    setIsInvincible(false);
+    
+    // Apply significantly enhanced effects based on ability type
     switch (type) {
       case 'bitcoin':
-        // Bitcoin boosts speed
-        console.log("🚀 Bitcoin Boost activated! Speed increased by 50%");
-        setSpeedMultiplier(1.5);
+        // Bitcoin - HODL power: Dramatically improved ball control and kicking power
+        console.log("💪 Bitcoin HODL Power activated! Significantly increased kick power and ball control");
+        setKickMultiplier(2.5);  // 150% stronger kicks
+        setBallControlRadius(7); // Larger ball control radius (was 4)
+        // Moderate speed boost too
+        setSpeedMultiplier(1.3);
         break;
       
       case 'ethereum':
-        // Ethereum boosts jump height
-        console.log("🦘 Ethereum Energizer activated! Jump height increased by 75%");
-        setJumpMultiplier(1.75);
+        // Ethereum - Smart Contract: Superior jumping and movement abilities
+        console.log("🦘 Ethereum Smart Contract activated! Extreme jump height and improved speed");
+        setJumpMultiplier(2.5);   // 150% higher jumps
+        setSpeedMultiplier(1.5);  // 50% faster movement
+        // Also improve kick power moderately
+        setKickMultiplier(1.3);
         break;
       
       case 'dogecoin':
-        // Dogecoin gives temporary invincibility and speed
-        console.log("⚡ Dogecoin Dash activated! Temporary invincibility and speed boost");
+        // Dogecoin - To The Moon: Massive speed burst and temporary invincibility
+        console.log("🚀 Dogecoin TO THE MOON! Extreme speed boost and invincibility");
         setIsInvincible(true);
-        setSpeedMultiplier(1.7);
+        setSpeedMultiplier(2.2);   // 120% faster (was 1.7)
+        setJumpMultiplier(1.5);    // 50% higher jumps
+        setKickMultiplier(1.5);    // 50% stronger kicks
+        break;
+      
+      case 'pepecoin':
+        // Pepecoin - Meme Magic: All-around boost to all abilities
+        console.log("✨ Pepecoin MEME MAGIC! Enhancing all abilities");
+        setSpeedMultiplier(1.8);   // 80% faster
+        setJumpMultiplier(1.8);    // 80% higher jumps
+        setKickMultiplier(1.8);    // 80% stronger kicks
+        setBallControlRadius(6);   // Better ball control
         break;
     }
     
@@ -116,6 +146,8 @@ const PlayerController = ({ character }: { character: string }) => {
       setAbilityTimeRemaining(0);
       setSpeedMultiplier(1.0);
       setJumpMultiplier(1.0);
+      setKickMultiplier(1.0);
+      setBallControlRadius(4);
       setIsInvincible(false);
       
       abilityEffectRef.current = null;
@@ -136,12 +168,7 @@ const PlayerController = ({ character }: { character: string }) => {
       return;
     }
     
-    // Get current key states - these are defined as:
-    // - left: A or Left Arrow (move left)
-    // - right: D or Right Arrow (move right)
-    // - jump: W or Up Arrow (jump)
-    // - kick: Space bar (kick the ball)
-    // - ability: E or Shift (use character's special ability)
+    // Get current key states
     const keys = getKeys();
     
     // Log key states every few seconds (not on every frame to reduce spam)
@@ -212,10 +239,9 @@ const PlayerController = ({ character }: { character: string }) => {
       const desiredVelocityX = direction.current.x * 10; // Target velocity for X-axis
       
       // Adjust Z-axis velocity based on forward/backward direction
-      // Use faster backward movement (increased from 8 to 12)
       const desiredVelocityZ = direction.current.z > 0 
-        ? direction.current.z * 12  // Backward (S key) - increased speed
-        : direction.current.z * 8;  // Forward (W key)
+        ? direction.current.z * 12  // Backward (S key)
+        : direction.current.z * 12;  // Forward (W key) - increased from 8 to 12 for faster forward movement
       
       // Blend current and desired velocity (smaller first number = more responsive)
       playerBody.velocity.x = playerBody.velocity.x * 0.2 + desiredVelocityX * 0.8;
@@ -239,19 +265,19 @@ const PlayerController = ({ character }: { character: string }) => {
       playerBody.velocity.z *= 0.7; 
     }
     
-    // Separate the jump logic from forward movement
-    // Jump (only when on ground and W/Up is pressed)
-    if (keys.jump && isOnGroundRef.current && jumpCooldownRef.current <= 0) {
+    // JUMPING CONTROLS
+    // Jump now ONLY with SHIFT key (removed W key jumping)
+    if (keys.shiftJump && isOnGroundRef.current && jumpCooldownRef.current <= 0) {
       // Apply jump multiplier from ability if active
-      const jumpForce = JUMP_FORCE * 20 * playerBody.mass * jumpMultiplier; // Scale for better jump
+      const jumpForce = JUMP_FORCE * 60 * playerBody.mass * jumpMultiplier; // Increased from 45 to 60 for higher jumps
       applyForce(playerBody, [0, jumpForce, 0]);
       jumpCooldownRef.current = 0.3; // Shorter cooldown for responsive jumps
       
       // Log jump with different message if enhanced by ability
       if (jumpMultiplier > 1.0) {
-        console.log(`💫 Enhanced jump applied with force ${jumpForce.toFixed(1)} (${Math.round((jumpMultiplier-1)*100)}% boost)`);
+        console.log(`🚀 SHIFT enhanced jump with force ${jumpForce.toFixed(1)} (${Math.round((jumpMultiplier-1)*100)}% boost)`);
       } else {
-        console.log("Jump applied", jumpForce);
+        console.log("SHIFT jump applied with force", jumpForce);
       }
     }
     
@@ -259,14 +285,16 @@ const PlayerController = ({ character }: { character: string }) => {
     if (frameCount.current % 600 === 0) {
       console.log(`🎮 CONTROLS: 
         WASD/Arrows: Move character
-        W/Up: Move forward and Jump
+        W/Up: Move forward only
+        SHIFT: Jump (doesn't move forward)
         S/Down: Move backward
         A/Left, D/Right: Move left/right
         Space: Kick the ball
-        E/Shift: Use special ability`);
+        E: Use special ability
+        R: Restart the game`);
     }
     
-    // Kick the ball with spacebar
+    // Kick the ball with spacebar - ENHANCED WITH PROJECTILE MOTION & ABILITY MULTIPLIERS
     if (keys.kick && kickCooldownRef.current <= 0) {
       const ballBody = getBody('ball');
       if (ballBody) {
@@ -278,8 +306,8 @@ const PlayerController = ({ character }: { character: string }) => {
         const dz = ballPos.z - playerPos.z;
         const distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
         
-        // Only kick if ball is within range (increased range for better gameplay)
-        if (distance < 4) {
+        // Only kick if ball is within range (now uses dynamic ballControlRadius)
+        if (distance < ballControlRadius) {
           // Get player's facing direction based on recent movement
           const playerDir = new Vector3(
             playerBody.velocity.x, 
@@ -292,44 +320,55 @@ const PlayerController = ({ character }: { character: string }) => {
             playerDir.set(0, 0, -1); // Default: kick toward opponent's goal
           }
           
-          // Calculate kick force based on direction and position
-          // The kick should be stronger and more precise
-          const kickForce = KICK_POWER * 8; // Significantly increased kick power
+          // ENHANCED PROJECTILE MOTION KICK with ABILITY MULTIPLIERS
+          // Calculate initial velocity components for projectile motion
+          const kickForce = KICK_POWER * kickMultiplier; // Apply ability-based kick multiplier
           
-          // Create kick vector:
-          // - Direction: primarily in player's facing direction
-          // - Vertical component: add upward force for better arc
-          // - Strength: apply significant force for visible movement
-          const kickVector: [number, number, number] = [
-            playerDir.x * kickForce * 0.8, // X component
-            3,                             // Y component (upward force)
-            playerDir.z * kickForce        // Z component (forward force)
-          ];
+          // Calculate angle based on distance to provide better arc for projectile motion
+          // For stronger kicks (higher multiplier), use a flatter trajectory
+          const kickAngle = Math.PI / (3 + kickMultiplier * 0.5); // Dynamic angle based on kick strength
+          
+          // Calculate velocity components for projectile motion
+          const vx = playerDir.x * kickForce * 0.8;
+          const vy = Math.sin(kickAngle) * kickForce * 0.9;
+          const vz = playerDir.z * kickForce;
           
           // Reset ball angular velocity before applying new force
           ballBody.angularVelocity.set(0, 0, 0);
           
-          // Apply the kick force
+          // Apply the kick force using projectile motion
           ballBody.velocity.set(0, 0, 0); // Reset velocity first for more consistent kicks
-          applyForce(ballBody, kickVector);
+          ballBody.velocity.x = vx;
+          ballBody.velocity.y = vy;
+          ballBody.velocity.z = vz;
           
-          // Add random spin to make kick more dynamic
-          const spinForce = 2 + Math.random() * 3;
+          // Add random spin to make kick more dynamic - enhanced for stronger kicks
+          const spinForce = 2 + Math.random() * 3 * kickMultiplier;
           const spinX = (Math.random() - 0.5) * spinForce;
           const spinY = (Math.random() - 0.5) * spinForce;
           const spinZ = (Math.random() - 0.5) * spinForce;
           
           ballBody.angularVelocity.set(spinX, spinY, spinZ);
           
-          console.log("⚽ Ball kicked with force:", kickVector);
+          // Log different message based on kick strength
+          if (kickMultiplier > 1.0) {
+            console.log(`⚽ POWER KICK! (${Math.round((kickMultiplier-1)*100)}% boost): `, {vx, vy, vz, distance});
+          } else {
+            console.log("⚽ Ball kicked with projectile motion:", {vx, vy, vz, distance});
+          }
           
           // Play kick sound
           playHit();
           
-          // Set cooldown - shorter for more responsive gameplay
-          kickCooldownRef.current = 0.3;
+          // Set cooldown - shorter when abilities are active for more intense gameplay
+          kickCooldownRef.current = Math.max(0.2, 0.3 / kickMultiplier);
         } else {
-          console.log("Ball too far to kick, distance:", distance);
+          // Show different message based on active ability
+          if (activeAbility) {
+            console.log(`Ball at distance ${distance.toFixed(1)} - get closer! (Control radius: ${ballControlRadius})`);
+          } else {
+            console.log("Ball too far to kick, distance:", distance);
+          }
         }
       }
     }
@@ -351,34 +390,76 @@ const PlayerController = ({ character }: { character: string }) => {
       playerBody.position.set(0, 1, 8);
       playerBody.velocity.set(0, 0, 0);
     }
+    
+    // Special ability-specific effects that need to be applied every frame
+    if (activeAbility === 'dogecoin' && isInvincible) {
+      // Add upward force to simulate floating/moon gravity when jumping
+      if (!isOnGroundRef.current && playerBody.velocity.y < 0) {
+        // Counteract gravity partially when falling
+        applyForce(playerBody, [0, playerBody.mass * 5, 0]);
+      }
+    }
   });
   
-  // Return visual effects for active abilities
+  // Return visual effects for active abilities - ENHANCED WITH MORE DRAMATIC EFFECTS
   if (activeAbility) {
     return (
       <group>
         {/* Visual effect for active ability */}
         {activeAbility === 'bitcoin' && (
-          <mesh position={[0, 1.5, 0]}>
-            <sphereGeometry args={[1.2, 16, 16]} />
-            <meshBasicMaterial color="#f7931a" transparent opacity={0.2} />
-          </mesh>
+          <>
+            <mesh position={[0, 1.5, 0]}>
+              <sphereGeometry args={[1.5, 24, 24]} />
+              <meshBasicMaterial color="#f7931a" transparent opacity={0.3} />
+            </mesh>
+            <pointLight position={[0, 1, 0]} intensity={1} distance={4} color="#f7931a" />
+            {/* Add particle trail or glow effect */}
+            <sprite position={[0, 2, 0]} scale={[3, 3, 1]}>
+              <spriteMaterial color="#f7931a" transparent opacity={0.5} />
+            </sprite>
+          </>
         )}
         
         {activeAbility === 'ethereum' && (
-          <mesh position={[0, 1.5, 0]}>
-            <sphereGeometry args={[1.2, 16, 16]} />
-            <meshBasicMaterial color="#627eea" transparent opacity={0.2} />
-          </mesh>
+          <>
+            <mesh position={[0, 1.5, 0]}>
+              <sphereGeometry args={[1.5, 24, 24]} />
+              <meshBasicMaterial color="#627eea" transparent opacity={0.4} wireframe />
+            </mesh>
+            <pointLight position={[0, 1, 0]} intensity={1.5} distance={5} color="#627eea" />
+            {/* Add ethereal glow */}
+            <sprite position={[0, 2, 0]} scale={[3, 3, 1]}>
+              <spriteMaterial color="#627eea" transparent opacity={0.6} />
+            </sprite>
+          </>
         )}
         
         {activeAbility === 'dogecoin' && (
           <>
             <mesh position={[0, 1.5, 0]}>
-              <sphereGeometry args={[1.2, 16, 16]} />
-              <meshBasicMaterial color="#c3a634" transparent opacity={0.3} />
+              <sphereGeometry args={[1.8, 24, 24]} />
+              <meshBasicMaterial color="#c3a634" transparent opacity={0.5} />
             </mesh>
-            <pointLight position={[0, 1, 0]} intensity={2} distance={3} color="#c3a634" />
+            <pointLight position={[0, 1, 0]} intensity={3} distance={6} color="#c3a634" />
+            <pointLight position={[0, -1, 0]} intensity={2} distance={4} color="#c3a634" />
+            {/* Add trail effect */}
+            <sprite position={[0, 2, 0]} scale={[4, 4, 1]}>
+              <spriteMaterial color="#ffcc00" transparent opacity={0.7} />
+            </sprite>
+          </>
+        )}
+        
+        {activeAbility === 'pepecoin' && (
+          <>
+            <mesh position={[0, 1.5, 0]}>
+              <sphereGeometry args={[1.6, 24, 24]} />
+              <meshBasicMaterial color="#5cb85c" transparent opacity={0.4} />
+            </mesh>
+            <pointLight position={[0, 1, 0]} intensity={2} distance={5} color="#5cb85c" />
+            {/* Add meme magic glow */}
+            <sprite position={[0, 2, 0]} scale={[3.5, 3.5, 1]}>
+              <spriteMaterial color="#5cb85c" transparent opacity={0.6} />
+            </sprite>
           </>
         )}
       </group>

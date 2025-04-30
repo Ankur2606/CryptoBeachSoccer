@@ -6,13 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
-import { Coins, Users, Trophy, ChevronLeft, Loader2 } from 'lucide-react';
+import { Coins, Users, Trophy, ChevronLeft, Loader2, RefreshCw } from 'lucide-react';
 import websocketService from '@/lib/multiplayer/websocketService';
 
-
-
 const MultiplayerLobby = () => {
-  const { setGameState } = useGameState();
+  const { gameState, setGameState } = useGameState();
   const { playSuccess } = useAudio();
   
   // State variables
@@ -28,6 +26,8 @@ const MultiplayerLobby = () => {
   const [isJoining, setIsJoining] = useState<boolean>(false);
   const [isGameStarting, setIsGameStarting] = useState<boolean>(false);
   const [connectionAttempts, setConnectionAttempts] = useState<number>(0);
+  const [isReconnecting, setIsReconnecting] = useState<boolean>(false);
+  const [showRestartButton, setShowRestartButton] = useState<boolean>(false);
   
   // Refs for timeouts
   const joinTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -42,6 +42,13 @@ const MultiplayerLobby = () => {
         if (success) {
           setError('');
           console.log('Successfully connected to multiplayer server');
+          
+          // If we're already in a game, show restart option
+          if (gameState === 'playing' && websocketService.roomId) {
+            setShowRestartButton(true);
+            setRoomCode(websocketService.roomId);
+            setPeerName(websocketService.peerName || '');
+          }
         } else {
           setError('Failed to connect to multiplayer server. Retrying...');
           console.error('Connection failed, will retry');
@@ -80,20 +87,59 @@ const MultiplayerLobby = () => {
     websocketService.on('room-created', (message) => {
       setRoomCode(message.data.roomId);
       playSuccess();
+      setError(''); // Clear any existing errors
     });
     
     websocketService.on('error', (message) => {
       setError(message.data.message);
+      setIsJoining(false);
+      
+      // If we get a "room is full" error but we were trying to rejoin our own room
+      if (message.data.message === 'Room is full' && isReconnecting) {
+        setError('Connection issue: Unable to rejoin room. Try creating a new room.');
+        setIsReconnecting(false);
+      }
+    });
+    
+    websocketService.on('join-timeout', () => {
+      setIsJoining(false);
+      setError('Joining timed out. Please try again with a valid room code.');
     });
     
     websocketService.on('player-joined', (message) => {
       setPeerName(message.data.guest);
+      setIsPeerReady(false); // Reset peer ready state when they join
       playSuccess();
+      setError(''); // Clear any existing errors
     });
     
     websocketService.on('player-ready-update', (message) => {
       setIsPeerReady(true);
       playSuccess();
+      
+      // Update ready states based on comprehensive info from server
+      if (message.data.hostReady !== undefined && message.data.guestReady !== undefined) {
+        if (websocketService.isHost) {
+          setIsReady(message.data.hostReady);
+          setIsPeerReady(message.data.guestReady);
+        } else {
+          setIsPeerReady(message.data.hostReady);
+          setIsReady(message.data.guestReady);
+        }
+      }
+    });
+    
+    websocketService.on('ready-acknowledged', (message) => {
+      // Update ready states based on comprehensive info from server
+      if (message.data.hostReady !== undefined && message.data.guestReady !== undefined) {
+        if (websocketService.isHost) {
+          setIsReady(message.data.hostReady);
+          setIsPeerReady(message.data.guestReady);
+        } else {
+          setIsPeerReady(message.data.hostReady);
+          setIsReady(message.data.guestReady);
+        }
+      }
     });
     
     websocketService.on('game-start', (message) => {
@@ -107,9 +153,12 @@ const MultiplayerLobby = () => {
     });
     
     websocketService.on('room-joined', (message) => {
+      setRoomCode(message.data.roomId);
       setPeerName(message.data.host);
       setIsJoining(false);
+      setIsPeerReady(false); // Reset host ready state when we join
       playSuccess();
+      setError(''); // Clear any existing errors
     });
     
     websocketService.on('player-left', () => {
@@ -118,11 +167,35 @@ const MultiplayerLobby = () => {
       setError('Other player left the game');
     });
     
+    websocketService.on('game-restart', (message) => {
+      // Reset ready states
+      setIsReady(false);
+      setIsPeerReady(false);
+      
+      // Show notification that game is being restarted
+      setError('');
+      
+      // Update peer name if needed
+      if (websocketService.isHost) {
+        setPeerName(message.data.guestName);
+      } else {
+        setPeerName(message.data.hostName);
+      }
+      
+      playSuccess();
+      
+      // Return to lobby for new match if currently in game
+      if (gameState === 'playing') {
+        setGameState('multiplayer_lobby');
+      }
+    });
+    
     // Cleanup when unmounting
     return () => {
       // Remove all event handlers
       ['room-created', 'error', 'player-joined', 'player-ready-update', 
-       'game-start', 'room-joined', 'player-left'].forEach(type => {
+       'game-start', 'room-joined', 'player-left', 'ready-acknowledged',
+       'game-restart', 'join-timeout'].forEach(type => {
         websocketService.off(type, () => {});
       });
       
@@ -132,7 +205,7 @@ const MultiplayerLobby = () => {
         joinTimeoutRef.current = null;
       }
     };
-  }, [setGameState, playSuccess]);
+  }, [setGameState, playSuccess, gameState, isReconnecting]);
   
   // Set player name
   const handleSetName = () => {
@@ -174,21 +247,17 @@ const MultiplayerLobby = () => {
     setError('');
     handleSetName();
     websocketService.joinRoom(roomToJoin.trim());
-    
-    // Set a timeout to clear the joining state if no response received
-    joinTimeoutRef.current = setTimeout(() => {
-      if (isJoining) {
-        setIsJoining(false);
-        setError('Joining timed out. Please try again.');
-      }
-      joinTimeoutRef.current = null;
-    }, 5000); // 5 seconds timeout
   };
   
   // Set player as ready
   const handleReady = () => {
     setIsReady(true);
     websocketService.setReady();
+  };
+  
+  // Request game restart
+  const handleRestartGame = () => {
+    websocketService.requestRestart();
   };
   
   // Manually attempt to reconnect to the WebSocket server
@@ -223,6 +292,38 @@ const MultiplayerLobby = () => {
     websocketService.disconnect();
     setGameState('menu');
   };
+  
+  // Determine if the restart button should be shown
+  useEffect(() => {
+    if (gameState === 'playing' && websocketService.roomId) {
+      setShowRestartButton(true);
+    } else {
+      setShowRestartButton(false);
+    }
+  }, [gameState]);
+  
+  // If we're in the game but viewing the lobby, show restart option
+  if (gameState === 'playing' && showRestartButton) {
+    return (
+      <div className="absolute top-0 right-0 p-4 z-50">
+        <Card className="w-64">
+          <CardHeader className="py-3">
+            <CardTitle className="text-sm font-medium">Multiplayer Game</CardTitle>
+          </CardHeader>
+          <CardContent className="py-2">
+            <Button 
+              onClick={handleRestartGame}
+              className="w-full flex items-center justify-center gap-2"
+              variant="outline"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Restart Match
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
   
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-blue-600 to-cyan-600 p-4">
@@ -364,6 +465,19 @@ const MultiplayerLobby = () => {
                   <div className="bg-yellow-50 p-3 rounded-md border border-yellow-200 text-center">
                     <span className="text-yellow-700">Waiting for player to join...</span>
                   </div>
+                )}
+                
+                {/* Restart button option - only show when a match has been played */}
+                {peerName && gameState !== 'playing' && (
+                  <Button 
+                    onClick={handleRestartGame}
+                    className="w-full mt-4 flex items-center justify-center gap-2"
+                    variant="outline"
+                    disabled={!isReady || !isPeerReady}
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Restart Match
+                  </Button>
                 )}
               </div>
             ) : (

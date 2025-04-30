@@ -18,7 +18,7 @@ export function useSound() {
   // Load all sound effects on mount
   useEffect(() => {
     // Background music
-    const bgMusic = new Audio('/sounds/background.mp3');
+    const bgMusic = new Audio('/sounds/background2.mp3');
     bgMusic.loop = true;
     bgMusic.volume = 0.3;
     setBackgroundMusic(bgMusic);

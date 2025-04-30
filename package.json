@@ -5,6 +5,8 @@
   "license": "MIT",
   "scripts": {
     "dev": "tsx server/index.ts",
+    "dev:client": "cd client && npm run dev",
+    "dev:all": "start npm run dev && start npm run dev:client",
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc",

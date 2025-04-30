@@ -14,6 +14,7 @@ interface Player {
   name: string;
   socket: WebSocket;
   room?: string;
+  pendingJoin?: string; // Track pending join attempts
 }
 
 interface GameRoom {
@@ -22,6 +23,7 @@ interface GameRoom {
   guest?: string;
   hostReady: boolean;
   guestReady: boolean;
+  gameInProgress: boolean; // Track if a game is currently being played
 }
 
 // Maintain state
@@ -101,10 +103,28 @@ export function setupWebSocketServer(server: Server) {
                 data: { message: 'Guest left the game' }
               });
             }
+            
+            // If guest leaves, clear the guest from the room but keep the room
+            room.guest = undefined;
+            room.guestReady = false;
           }
           
-          // Remove the room
-          rooms.delete(player.room);
+          // If host leaves, remove the room completely
+          if (room.host === playerId) {
+            rooms.delete(player.room);
+          }
+        }
+      }
+      
+      // Also clear any pending join attempts
+      if (player && player.pendingJoin) {
+        const pendingRoom = rooms.get(player.pendingJoin);
+        if (pendingRoom) {
+          // If this player was attempting to join as guest, clear the pending state
+          if (pendingRoom.guest === playerId) {
+            pendingRoom.guest = undefined;
+            pendingRoom.guestReady = false;
+          }
         }
       }
       
@@ -115,7 +135,9 @@ export function setupWebSocketServer(server: Server) {
   
   // Send a message to a client
   function send(socket: WebSocket, message: GameMessage) {
-    socket.send(JSON.stringify(message));
+    if (socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify(message));
+    }
   }
   
   // Handle incoming messages
@@ -141,7 +163,8 @@ export function setupWebSocketServer(server: Server) {
           id: roomId,
           host: playerId,
           hostReady: false,
-          guestReady: false
+          guestReady: false,
+          gameInProgress: false
         });
         
         // Associate the player with the room
@@ -177,9 +200,47 @@ export function setupWebSocketServer(server: Server) {
           return;
         }
         
-        // Allow the player to rejoin if they were previously the guest in this room
-        if (room.guest && room.guest !== playerId) {
-          // Only reject if it's a different player trying to join
+        // Track that this player is attempting to join the room
+        player.pendingJoin = room.id;
+        
+        // If there's already a guest in the room, handle different cases
+        if (room.guest) {
+          // Case 1: The player was previously the guest and is trying to rejoin
+          // (common after brief disconnects or page refreshes)
+          const existingGuest = players.get(room.guest);
+          
+          // If the current guest isn't connected, allow this player to take over
+          if (!existingGuest || existingGuest.socket.readyState !== WebSocket.OPEN) {
+            log(`Player ${player.name} rejoining as guest in room ${room.id} (replacing disconnected guest)`, 'websocket');
+            room.guest = playerId;
+            player.room = room.id;
+            
+            // Notify the host about the new guest
+            const hostPlayer = players.get(room.host);
+            if (hostPlayer) {
+              send(hostPlayer.socket, {
+                type: 'player-joined',
+                data: { 
+                  guest: player.name,
+                  guestId: playerId
+                }
+              });
+            }
+            
+            // Notify the guest that they've joined
+            send(player.socket, {
+              type: 'room-joined',
+              data: { 
+                roomId: room.id,
+                host: hostPlayer ? hostPlayer.name : 'Unknown',
+                hostId: room.host
+              }
+            });
+            
+            return;
+          }
+          
+          // If it's a different player trying to join, reject them
           send(player.socket, {
             type: 'error',
             data: { message: 'Room is full' }
@@ -296,6 +357,9 @@ export function setupWebSocketServer(server: Server) {
         
         // Check if both players are ready
         if (playerRoom.hostReady && playerRoom.guestReady) {
+          // Mark the game as in progress
+          playerRoom.gameInProgress = true;
+          
           // Start the game by notifying both players
           send(host.socket, {
             type: 'game-start',
@@ -380,9 +444,10 @@ export function setupWebSocketServer(server: Server) {
           return;
         }
         
-        // Reset ready states and prepare for a new game
+        // Reset ready states and game status
         restartRoom.hostReady = false;
         restartRoom.guestReady = false;
+        restartRoom.gameInProgress = false;
         
         // Get both player objects
         const restartHost = players.get(restartRoom.host);

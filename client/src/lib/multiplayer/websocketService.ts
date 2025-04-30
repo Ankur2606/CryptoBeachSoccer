@@ -20,6 +20,10 @@ class WebSocketService {
   private _roomId: string | null = null;
   private _connected: boolean = false;
   private _peerName: string | null = null;
+  private _joinTimeout: NodeJS.Timeout | null = null;
+  private _pendingJoinRoomId: string | null = null;
+  private _hostReady: boolean = false;
+  private _guestReady: boolean = false;
   
   // Getter for player properties
   get playerId(): string | null { return this._playerId; }
@@ -28,6 +32,8 @@ class WebSocketService {
   get roomId(): string | null { return this._roomId; }
   get isConnected(): boolean { return this._connected; }
   get peerName(): string | null { return this._peerName; }
+  get hostReady(): boolean { return this._hostReady; }
+  get guestReady(): boolean { return this._guestReady; }
   
   // Connect to the WebSocket server
   connect(): Promise<boolean> {
@@ -55,6 +61,13 @@ class WebSocketService {
         console.log('WebSocket connection established');
         this._connected = true;
         resolve(true);
+        
+        // If we had a pending room join when disconnected, attempt to rejoin
+        if (this._pendingJoinRoomId) {
+          console.log(`Reconnected, attempting to rejoin room: ${this._pendingJoinRoomId}`);
+          this.joinRoom(this._pendingJoinRoomId);
+          this._pendingJoinRoomId = null;
+        }
       });
       
       // Connection closed
@@ -104,12 +117,20 @@ class WebSocketService {
       this.reconnectTimer = null;
     }
     
+    if (this._joinTimeout) {
+      clearTimeout(this._joinTimeout);
+      this._joinTimeout = null;
+    }
+    
     this._connected = false;
     this._playerId = null;
     this._playerName = null;
     this._isHost = false;
     this._roomId = null;
     this._peerName = null;
+    this._pendingJoinRoomId = null;
+    this._hostReady = false;
+    this._guestReady = false;
   }
   
   // Send a message to the server
@@ -165,16 +186,61 @@ class WebSocketService {
       case 'room-created':
         this._roomId = message.data.roomId;
         this._isHost = true;
+        // Reset ready states when room is created
+        this._hostReady = false;
+        this._guestReady = false;
         break;
         
       case 'room-joined':
+        // Clear any join timeout
+        if (this._joinTimeout) {
+          clearTimeout(this._joinTimeout);
+          this._joinTimeout = null;
+        }
+        
         this._roomId = message.data.roomId;
         this._isHost = false;
         this._peerName = message.data.host;
+        this._hostReady = false;
+        this._guestReady = false;
         break;
         
       case 'player-joined':
         this._peerName = message.data.guest;
+        break;
+        
+      case 'player-ready-update':
+        // Update the ready state of the other player
+        if (message.data.player === 'host') {
+          this._hostReady = message.data.ready;
+        } else if (message.data.player === 'guest') {
+          this._guestReady = message.data.ready;
+        }
+        
+        // Also ensure we have the full state
+        if (message.data.hostReady !== undefined) {
+          this._hostReady = message.data.hostReady;
+        }
+        if (message.data.guestReady !== undefined) {
+          this._guestReady = message.data.guestReady;
+        }
+        break;
+        
+      case 'ready-acknowledged':
+        // Update our own ready state based on server confirmation
+        if (this._isHost) {
+          this._hostReady = true;
+        } else {
+          this._guestReady = true;
+        }
+        
+        // Also ensure we have the full state
+        if (message.data.hostReady !== undefined) {
+          this._hostReady = message.data.hostReady;
+        }
+        if (message.data.guestReady !== undefined) {
+          this._guestReady = message.data.guestReady;
+        }
         break;
         
       case 'game-start':
@@ -183,6 +249,35 @@ class WebSocketService {
           this._peerName = message.data.guestName;
         } else {
           this._peerName = message.data.hostName;
+        }
+        break;
+        
+      case 'player-left':
+        if (this._isHost) {
+          // If we're the host and the guest left
+          this._peerName = null;
+          this._guestReady = false;
+        } else {
+          // If we're the guest and the host left, we become disconnected
+          this._roomId = null;
+          this._peerName = null;
+          this._hostReady = false;
+          this._guestReady = false;
+        }
+        break;
+        
+      case 'game-restart':
+        // Reset ready states on game restart
+        this._hostReady = false;
+        this._guestReady = false;
+        break;
+        
+      case 'error':
+        // If we get a "room is full" error but we're trying to rejoin our own room,
+        // we should try to reconnect with a different approach
+        if (message.data.message === 'Room is full' && this._roomId) {
+          console.log('Room full error when trying to rejoin, attempting recovery...');
+          // This will be handled by the component's error handler
         }
         break;
     }
@@ -225,11 +320,46 @@ class WebSocketService {
   
   // Join an existing game room
   joinRoom(roomId: string) {
+    // Store the room ID we're trying to join in case we need to retry
+    this._pendingJoinRoomId = roomId;
+    
+    // Clear any existing join timeout
+    if (this._joinTimeout) {
+      clearTimeout(this._joinTimeout);
+    }
+    
+    // Set a timeout to clear the pending join if it doesn't complete
+    this._joinTimeout = setTimeout(() => {
+      console.log(`Join room timeout for room ${roomId}`);
+      this._pendingJoinRoomId = null;
+      this._joinTimeout = null;
+      
+      // Dispatch a custom timeout event
+      const handlers = this.messageHandlers.get('join-timeout');
+      if (handlers) {
+        handlers.forEach(handler => {
+          try {
+            handler({ 
+              type: 'join-timeout', 
+              data: { roomId } 
+            });
+          } catch (error) {
+            console.error('Error in join-timeout handler', error);
+          }
+        });
+      }
+    }, 5000);
+    
     return this.send('join-room', { roomId });
   }
   
   // Set player ready status
   setReady() {
+    if (this._isHost) {
+      this._hostReady = true;
+    } else {
+      this._guestReady = true;
+    }
     return this.send('player-ready');
   }
   
@@ -241,6 +371,31 @@ class WebSocketService {
   // Request game restart
   requestRestart() {
     return this.send('restart-game');
+  }
+  
+  // Check if both players are ready
+  areBothPlayersReady(): boolean {
+    return this._hostReady && this._guestReady;
+  }
+  
+  // Force reconnect as a specific player type in a room
+  async forceReconnect(asHost: boolean, roomId: string) {
+    // Disconnect first
+    this.disconnect();
+    
+    // Connect again
+    await this.connect();
+    
+    // Depending on whether we're reconnecting as host or guest
+    if (asHost) {
+      this._isHost = true;
+      this._roomId = roomId;
+      // Could send a custom message to server to recover host status
+    } else {
+      this._pendingJoinRoomId = roomId;
+      // Try to join the room again
+      this.joinRoom(roomId);
+    }
   }
 }
 
