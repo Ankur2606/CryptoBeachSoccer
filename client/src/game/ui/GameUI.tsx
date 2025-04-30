@@ -4,8 +4,9 @@ import { useCharacter } from '@/lib/stores/useCharacter';
 import { useAudio } from '@/lib/stores/useAudio';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Trophy, VolumeX, Volume2, TrendingUp, Coins } from 'lucide-react';
+import { Trophy, VolumeX, Volume2, TrendingUp, Coins, Zap, ArrowUp } from 'lucide-react';
 import { characterData } from '../models/character';
+import { AbilityType } from '../components/Abilities';
 
 // Crypto-themed puns and memes for random display
 const CRYPTO_PUNS = [
@@ -36,9 +37,13 @@ const GameUI = () => {
     stopTimer,
   } = useGameState();
   
-  const { selectedCharacter, cooldownRemaining } = useCharacter();
+  const { selectedCharacter, cooldownRemaining, isAbilityActive } = useCharacter();
   const { toggleMute, isMuted, playHit, playSuccess } = useAudio();
   const [showGameOver, setShowGameOver] = useState(false);
+  
+  // Active crypto ability states for UI display
+  const [activeAbilityType, setActiveAbilityType] = useState<AbilityType | null>(null);
+  const [abilityTimeRemaining, setAbilityTimeRemaining] = useState(0);
   
   // Crypto pun notification system
   const [currentPun, setCurrentPun] = useState<string>("");
@@ -78,6 +83,33 @@ const GameUI = () => {
       setShowGameOver(false);
     }
   }, [gameState]);
+  
+  // Listen for ability collection events
+  useEffect(() => {
+    const handleAbilityCollected = (event: Event) => {
+      const customEvent = event as CustomEvent<{type: AbilityType, data: any}>;
+      const abilityType = customEvent.detail.type;
+      const abilityData = customEvent.detail.data;
+      
+      // Update UI with active ability info
+      setActiveAbilityType(abilityType);
+      setAbilityTimeRemaining(abilityData.duration);
+      
+      // Set a timer to clear the ability UI when it expires
+      const timer = setTimeout(() => {
+        setActiveAbilityType(null);
+        setAbilityTimeRemaining(0);
+      }, abilityData.duration * 1000);
+      
+      return () => clearTimeout(timer);
+    };
+    
+    window.addEventListener('ability-collected', handleAbilityCollected);
+    
+    return () => {
+      window.removeEventListener('ability-collected', handleAbilityCollected);
+    };
+  }, []);
   
   // Display random crypto puns on scoring
   useEffect(() => {
@@ -164,6 +196,40 @@ const GameUI = () => {
             <div className="bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-500 text-black font-bold py-3 px-6 rounded-lg text-xl animate-bounce shadow-lg flex items-center gap-2">
               <Coins className="h-6 w-6" />
               {currentPun}
+            </div>
+          </div>
+        )}
+        
+        {/* Active Ability Display */}
+        {activeAbilityType && (
+          <div className="fixed top-20 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-full shadow-lg animate-pulse"
+            style={{ 
+              backgroundColor: activeAbilityType === 'bitcoin' ? 'rgba(247, 147, 26, 0.9)' : 
+                              activeAbilityType === 'ethereum' ? 'rgba(98, 126, 234, 0.9)' : 
+                              'rgba(195, 166, 52, 0.9)'
+            }}>
+            <div className="flex items-center gap-2">
+              {activeAbilityType === 'bitcoin' && (
+                <>
+                  <Zap className="h-4 w-4 text-white" />
+                  <span className="font-bold text-white">Bitcoin Boost Active!</span>
+                </>
+              )}
+              {activeAbilityType === 'ethereum' && (
+                <>
+                  <ArrowUp className="h-4 w-4 text-white" />
+                  <span className="font-bold text-white">Ethereum Jump Active!</span>
+                </>
+              )}
+              {activeAbilityType === 'dogecoin' && (
+                <>
+                  <Zap className="h-4 w-4 text-white" />
+                  <span className="font-bold text-white">Dogecoin Dash Active!</span>
+                </>
+              )}
+              <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full text-white">
+                {abilityTimeRemaining.toFixed(1)}s
+              </span>
             </div>
           </div>
         )}
