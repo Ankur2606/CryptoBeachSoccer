@@ -106,7 +106,7 @@ const Character = ({
         linearDamping: 0.9, // Add resistance to movement
         userData: {
           type: 'character',
-          bodyId,
+          id: bodyId,
           characterType: type
         }
       });

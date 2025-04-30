@@ -22,7 +22,7 @@ const Ball = () => {
         linearDamping: 0.3, // Add some air resistance
         userData: {
           type: 'ball',
-          bodyId: 'ball'
+          id: 'ball'
         }
       });
     }
@@ -50,14 +50,7 @@ const Ball = () => {
   return (
     <mesh ref={ballRef} castShadow receiveShadow>
       <sphereGeometry args={[0.5, 32, 32]} />
-      <meshStandardMaterial>
-        <group>
-          {/* Pepe the Frog Ball - Simplified with colors */}
-          <meshStandardMaterial color="#5cb85c" /> {/* Green for Pepe */}
-          {/* Eyes represented by materials */}
-          <sphereGeometry args={[0.15, 16, 16]} />
-        </group>
-      </meshStandardMaterial>
+      <meshStandardMaterial color="#5cb85c" /> {/* Green for Pepe */}
     </mesh>
   );
 };

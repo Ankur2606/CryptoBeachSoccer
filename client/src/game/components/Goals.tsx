@@ -29,7 +29,7 @@ const Goals = () => {
       isTrigger: true, // Make it a trigger zone
       userData: {
         type: 'goal',
-        goalId: 'player_goal'
+        id: 'player_goal'
       },
       onCollide: (body) => {
         // If the ball enters player's goal, AI scores
