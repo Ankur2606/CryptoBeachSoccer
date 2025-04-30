@@ -1,0 +1,63 @@
+chunk-T6SUJGNB.js?v=f8304fe6:18167 Physics world not initialized
+console.error @ chunk-T6SUJGNB.js?v=f8304fe6:18167Understand this error
+2chunk-T6SUJGNB.js?v=f8304fe6:10674 Uncaught TypeError: CANNON.Compound is not a constructor
+    at addBody (usePhysics.ts:133:19)
+    at Characters.tsx:94:7
+    at commitHookEffectListMount (chunk-T6SUJGNB.js?v=f8304fe6:10911:34)
+    at commitPassiveMountOnFiber (chunk-T6SUJGNB.js?v=f8304fe6:12219:19)
+    at commitPassiveMountEffects_complete (chunk-T6SUJGNB.js?v=f8304fe6:12191:17)
+    at commitPassiveMountEffects_begin (chunk-T6SUJGNB.js?v=f8304fe6:12181:15)
+    at commitPassiveMountEffects (chunk-T6SUJGNB.js?v=f8304fe6:12171:11)
+    at flushPassiveEffectsImpl (chunk-T6SUJGNB.js?v=f8304fe6:13939:11)
+    at flushPassiveEffects (chunk-T6SUJGNB.js?v=f8304fe6:13902:22)
+    at commitRootImpl (chunk-T6SUJGNB.js?v=f8304fe6:13871:13)Understand this error
+2chunk-T6SUJGNB.js?v=f8304fe6:18167 The above error occurred in the <Character> component:
+
+    at Character (https://a4790213-5ad5-4875-8faf-c80c25cc2ea8-00-3f94wfhimk6rj.janeway.replit.dev/src/game/components/Characters.tsx:77:3)
+    at group
+    at Characters (https://a4790213-5ad5-4875-8faf-c80c25cc2ea8-00-3f94wfhimk6rj.janeway.replit.dev/src/game/components/Characters.tsx:27:36)
+    at PhysicsWorld (https://a4790213-5ad5-4875-8faf-c80c25cc2ea8-00-3f94wfhimk6rj.janeway.replit.dev/src/game/components/PhysicsWorld.tsx:21:25)
+    at Suspense
+    at Suspense
+    at ErrorBoundary (https://a4790213-5ad5-4875-8faf-c80c25cc2ea8-00-3f94wfhimk6rj.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-T6SUJGNB.js?v=f8304fe6:16490:5)
+    at FiberProvider (https://a4790213-5ad5-4875-8faf-c80c25cc2ea8-00-3f94wfhimk6rj.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-T6SUJGNB.js?v=f8304fe6:18170:21)
+    at Provider (https://a4790213-5ad5-4875-8faf-c80c25cc2ea8-00-3f94wfhimk6rj.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-T6SUJGNB.js?v=f8304fe6:17779:3)
+
+React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundary.
+console.error @ chunk-T6SUJGNB.js?v=f8304fe6:18167Understand this error
+2chunk-T6SUJGNB.js?v=f8304fe6:18276 Uncaught TypeError: CANNON.Compound is not a constructor
+    at addBody (usePhysics.ts:133:19)
+    at Characters.tsx:94:7
+    at commitHookEffectListMount (chunk-T6SUJGNB.js?v=f8304fe6:10911:34)
+    at commitPassiveMountOnFiber (chunk-T6SUJGNB.js?v=f8304fe6:12219:19)
+    at commitPassiveMountEffects_complete (chunk-T6SUJGNB.js?v=f8304fe6:12191:17)
+    at commitPassiveMountEffects_begin (chunk-T6SUJGNB.js?v=f8304fe6:12181:15)
+    at commitPassiveMountEffects (chunk-T6SUJGNB.js?v=f8304fe6:12171:11)
+    at flushPassiveEffectsImpl (chunk-T6SUJGNB.js?v=f8304fe6:13939:11)
+    at flushPassiveEffects (chunk-T6SUJGNB.js?v=f8304fe6:13902:22)
+    at commitRootImpl (chunk-T6SUJGNB.js?v=f8304fe6:13871:13)Understand this error
+chunk-T6SUJGNB.js?v=f8304fe6:18167 The above error occurred in the <ForwardRef(Canvas)> component:
+
+    at Canvas (https://a4790213-5ad5-4875-8faf-c80c25cc2ea8-00-3f94wfhimk6rj.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-T6SUJGNB.js?v=f8304fe6:18236:3)
+    at FiberProvider (https://a4790213-5ad5-4875-8faf-c80c25cc2ea8-00-3f94wfhimk6rj.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-T6SUJGNB.js?v=f8304fe6:18170:21)
+    at CanvasWrapper
+    at GameScreen (https://a4790213-5ad5-4875-8faf-c80c25cc2ea8-00-3f94wfhimk6rj.janeway.replit.dev/src/game/screens/GameScreen.tsx:38:50)
+    at KeyboardControls (https://a4790213-5ad5-4875-8faf-c80c25cc2ea8-00-3f94wfhimk6rj.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@react-three_drei.js?v=100316ee:9124:8)
+    at div
+    at App (https://a4790213-5ad5-4875-8faf-c80c25cc2ea8-00-3f94wfhimk6rj.janeway.replit.dev/src/App.tsx?v=w6K8Or1IjmAHKWRF67M9t:36:25)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+console.error @ chunk-T6SUJGNB.js?v=f8304fe6:18167Understand this error
+chunk-PJEEZAML.js?v=f8304fe6:19413 Uncaught TypeError: CANNON.Compound is not a constructor
+    at addBody (usePhysics.ts:133:19)
+    at Characters.tsx:94:7
+    at commitHookEffectListMount (chunk-T6SUJGNB.js?v=f8304fe6:10911:34)
+    at commitPassiveMountOnFiber (chunk-T6SUJGNB.js?v=f8304fe6:12219:19)
+    at commitPassiveMountEffects_complete (chunk-T6SUJGNB.js?v=f8304fe6:12191:17)
+    at commitPassiveMountEffects_begin (chunk-T6SUJGNB.js?v=f8304fe6:12181:15)
+    at commitPassiveMountEffects (chunk-T6SUJGNB.js?v=f8304fe6:12171:11)
+    at flushPassiveEffectsImpl (chunk-T6SUJGNB.js?v=f8304fe6:13939:11)
+    at flushPassiveEffects (chunk-T6SUJGNB.js?v=f8304fe6:13902:22)
+    at commitRootImpl (chunk-T6SUJGNB.js?v=f8304fe6:13871:13)Understand this error
+chunk-4OO23XFX.js?v=f8304fe6:17835 THREE.WebGLRenderer: Context Lost.

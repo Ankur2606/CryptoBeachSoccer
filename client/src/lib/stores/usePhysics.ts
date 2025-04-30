@@ -56,9 +56,21 @@ export const usePhysics = create<PhysicsStore>()(
       // Check if CANNON is available (from CDN)
       if (typeof window === 'undefined' || !(window as any).CANNON) {
         console.error('CANNON.js not available');
+        
+        // Add script element dynamically if not already loaded
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js';
+        script.async = true;
+        script.onload = () => {
+          console.log('CANNON.js loaded dynamically');
+          // Retry initialization after script loads
+          setTimeout(() => get().initPhysics(), 100);
+        };
+        document.head.appendChild(script);
         return;
       }
       
+      console.log('Initializing physics world with CANNON.js');
       const CANNON = (window as any).CANNON;
       
       // Create a new world
@@ -73,6 +85,7 @@ export const usePhysics = create<PhysicsStore>()(
       // Make world available globally for debugging
       (window as any).CANNON = CANNON;
       (window as any).physicsWorld = world;
+      console.log('Physics world initialized successfully');
     },
     
     // Update physics simulation
@@ -124,31 +137,13 @@ export const usePhysics = create<PhysicsStore>()(
           );
           break;
         case 'capsule':
-          // Capsule is not built-in, approximate with cylinder and spheres
+          // Since Compound shape isn't available in this CANNON version,
+          // we'll use a simple cylinder shape instead
           const radius = options.radius || 0.5;
           const height = options.height || 1;
-          const cylinderHeight = height - radius * 2;
           
-          // Create compound shape
-          shape = new CANNON.Compound();
-          
-          // Cylinder for middle
-          const cylinderShape = new CANNON.Cylinder(radius, radius, cylinderHeight, 16);
-          shape.addChild(
-            cylinderShape,
-            new CANNON.Vec3(0, 0, 0)
-          );
-          
-          // Spheres for ends
-          const sphereShape = new CANNON.Sphere(radius);
-          shape.addChild(
-            sphereShape,
-            new CANNON.Vec3(0, cylinderHeight / 2, 0)
-          );
-          shape.addChild(
-            sphereShape,
-            new CANNON.Vec3(0, -cylinderHeight / 2, 0)
-          );
+          // Create cylinder shape (simpler version of capsule)
+          shape = new CANNON.Cylinder(radius, radius, height, 16);
           break;
         default:
           shape = new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5));

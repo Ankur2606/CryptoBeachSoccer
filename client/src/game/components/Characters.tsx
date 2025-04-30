@@ -90,11 +90,12 @@ const Character = ({
   // Create the character physics body
   useEffect(() => {
     if (meshRef.current) {
+      console.log('Creating character physics body', bodyId);
       // Create character body
-      addBody({
+      const body = addBody({
         position,
         mass: 5,
-        shape: 'capsule',
+        shape: 'cylinder', // Using cylinder instead of capsule
         height: 1.5,
         radius: 0.5,
         material: {
@@ -109,6 +110,7 @@ const Character = ({
           characterType: type
         }
       });
+      console.log('Character body created:', !!body);
     }
     
     return () => {
