@@ -159,8 +159,35 @@ const GameUI = () => {
     setShowGameOver(false);
   };
   
+  // Request a game restart in multiplayer mode
+  const handleRequestRestart = () => {
+    if (!isMultiplayer) return;
+    
+    // Send restart request to server
+    websocketService.requestRestart();
+    
+    // Show a requesting state
+    setError('Restart requested...');
+    
+    // Set up listener for server response
+    websocketService.on('game-restart', (message) => {
+      console.log('Game restart message received:', message);
+      resetGame();
+      setGameState('multiplayer_lobby');
+      setShowGameOver(false);
+      
+      // Remove listener to avoid duplicates
+      websocketService.off('game-restart', () => {});
+    });
+  };
+  
   // Handle return to menu
   const handleMenu = () => {
+    // Disconnect WebSocket if in multiplayer mode
+    if (isMultiplayer) {
+      websocketService.disconnect();
+    }
+    
     resetGame();
     setGameState('menu');
     setShowGameOver(false);

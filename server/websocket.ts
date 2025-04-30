@@ -168,7 +168,18 @@ export function setupWebSocketServer(server: Server) {
           return;
         }
         
-        if (room.guest) {
+        // Special case: If the player is already in this room as the host, don't allow them to join as guest
+        if (room.host === playerId) {
+          send(player.socket, {
+            type: 'error',
+            data: { message: 'You are already the host of this room' }
+          });
+          return;
+        }
+        
+        // Allow the player to rejoin if they were previously the guest in this room
+        if (room.guest && room.guest !== playerId) {
+          // Only reject if it's a different player trying to join
           send(player.socket, {
             type: 'error',
             data: { message: 'Room is full' }
@@ -202,7 +213,8 @@ export function setupWebSocketServer(server: Server) {
           }
         });
         
-        log(`Player ${player.name} joined room ${room.id}`, 'websocket');
+        // Log the successful join
+        log(`Player ${player.name} joined room ${room.id} as guest`, 'websocket');
         break;
         
       case 'player-ready':
@@ -224,6 +236,15 @@ export function setupWebSocketServer(server: Server) {
           return;
         }
         
+        // Make sure we have a guest before proceeding
+        if (!playerRoom.guest) {
+          send(player.socket, {
+            type: 'error',
+            data: { message: 'Waiting for another player to join' }
+          });
+          return;
+        }
+        
         // Update ready state
         if (playerRoom.host === playerId) {
           playerRoom.hostReady = true;
@@ -231,56 +252,70 @@ export function setupWebSocketServer(server: Server) {
           playerRoom.guestReady = true;
         }
         
+        // Acknowledgment to the player who marked themselves ready
+        send(player.socket, {
+          type: 'ready-acknowledged',
+          data: { 
+            success: true,
+            hostReady: playerRoom.hostReady,
+            guestReady: playerRoom.guestReady
+          }
+        });
+        
+        // Get both player objects
+        const host = players.get(playerRoom.host);
+        const guest = players.get(playerRoom.guest);
+        
+        if (!host || !guest) {
+          log(`Error: Missing players in room ${player.room}`, 'websocket');
+          return;
+        }
+        
+        // Notify the other player about the ready state change
+        if (playerRoom.host === playerId) {
+          send(guest.socket, {
+            type: 'player-ready-update',
+            data: { 
+              player: 'host',
+              ready: true,
+              hostReady: playerRoom.hostReady,
+              guestReady: playerRoom.guestReady
+            }
+          });
+        } else if (playerRoom.guest === playerId) {
+          send(host.socket, {
+            type: 'player-ready-update',
+            data: { 
+              player: 'guest',
+              ready: true,
+              hostReady: playerRoom.hostReady,
+              guestReady: playerRoom.guestReady
+            }
+          });
+        }
+        
         // Check if both players are ready
         if (playerRoom.hostReady && playerRoom.guestReady) {
-          // Start the game
-          const host = players.get(playerRoom.host);
-          const guest = players.get(playerRoom.guest!);
+          // Start the game by notifying both players
+          send(host.socket, {
+            type: 'game-start',
+            data: {
+              hostName: host.name,
+              guestName: guest.name,
+              isHost: true
+            }
+          });
           
-          if (host && guest) {
-            send(host.socket, {
-              type: 'game-start',
-              data: {
-                hostName: host.name,
-                guestName: guest.name,
-                isHost: true
-              }
-            });
-            
-            send(guest.socket, {
-              type: 'game-start',
-              data: {
-                hostName: host.name,
-                guestName: guest.name,
-                isHost: false
-              }
-            });
-          }
-        } else {
-          // Notify the other player
-          if (playerRoom.host === playerId && playerRoom.guest) {
-            const guestPlayer = players.get(playerRoom.guest);
-            if (guestPlayer) {
-              send(guestPlayer.socket, {
-                type: 'player-ready-update',
-                data: { 
-                  player: 'host',
-                  ready: true
-                }
-              });
+          send(guest.socket, {
+            type: 'game-start',
+            data: {
+              hostName: host.name,
+              guestName: guest.name,
+              isHost: false
             }
-          } else if (playerRoom.guest === playerId) {
-            const hostPlayer = players.get(playerRoom.host);
-            if (hostPlayer) {
-              send(hostPlayer.socket, {
-                type: 'player-ready-update',
-                data: { 
-                  player: 'guest',
-                  ready: true
-                }
-              });
-            }
-          }
+          });
+          
+          log(`Game starting in room ${player.room} between ${host.name} and ${guest.name}`, 'websocket');
         }
         
         log(`Player ${player.name} is ready in room ${player.room}`, 'websocket');
@@ -320,35 +355,67 @@ export function setupWebSocketServer(server: Server) {
       case 'restart-game':
         // Restart the game session
         if (!player.room) {
+          send(player.socket, {
+            type: 'error',
+            data: { message: 'You are not in a room' }
+          });
           return;
         }
         
         const restartRoom = rooms.get(player.room);
         if (!restartRoom) {
+          send(player.socket, {
+            type: 'error',
+            data: { message: 'Room not found' }
+          });
           return;
         }
         
-        // Reset ready states
+        // Make sure we have both players before proceeding
+        if (!restartRoom.guest) {
+          send(player.socket, {
+            type: 'error',
+            data: { message: 'Cannot restart: waiting for another player to join' }
+          });
+          return;
+        }
+        
+        // Reset ready states and prepare for a new game
         restartRoom.hostReady = false;
         restartRoom.guestReady = false;
         
-        // Notify both players
+        // Get both player objects
         const restartHost = players.get(restartRoom.host);
-        const restartGuest = restartRoom.guest ? players.get(restartRoom.guest) : null;
+        const restartGuest = players.get(restartRoom.guest);
         
-        if (restartHost) {
-          send(restartHost.socket, {
-            type: 'game-restart',
-            data: { requestedBy: player.name }
+        if (!restartHost || !restartGuest) {
+          log(`Error: Missing players for restart in room ${player.room}`, 'websocket');
+          send(player.socket, {
+            type: 'error',
+            data: { message: 'Cannot restart: player disconnected' }
           });
+          return;
         }
         
-        if (restartGuest) {
-          send(restartGuest.socket, {
-            type: 'game-restart',
-            data: { requestedBy: player.name }
-          });
-        }
+        // Notify the host
+        send(restartHost.socket, {
+          type: 'game-restart',
+          data: { 
+            requestedBy: player.name,
+            hostName: restartHost.name,
+            guestName: restartGuest.name
+          }
+        });
+        
+        // Notify the guest
+        send(restartGuest.socket, {
+          type: 'game-restart',
+          data: { 
+            requestedBy: player.name,
+            hostName: restartHost.name,
+            guestName: restartGuest.name
+          }
+        });
         
         log(`Game restarted in room ${player.room} by ${player.name}`, 'websocket');
         break;
