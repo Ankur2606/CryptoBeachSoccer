@@ -85,6 +85,7 @@ const PlayerController = ({ character }: { character: string }) => {
     direction.current.set(0, 0, 0);
     
     // MOVEMENT: WASD or Arrow Keys
+    // Horizontal movement (left/right)
     if (keys.left) {
       direction.current.x = -1;
       // Only log occasionally
@@ -96,6 +97,20 @@ const PlayerController = ({ character }: { character: string }) => {
       if (frameCount.current % 60 === 0) console.log("Moving RIGHT using D or →");
     }
     
+    // Forward/backward movement (W/S keys)
+    if (keys.forward) {
+      // W key moves forward on the field (toward opponent's goal)
+      direction.current.z = -1;
+      if (frameCount.current % 60 === 0) console.log("Moving FORWARD using W or ↑");
+    }
+    
+    // S key moves backward
+    if (keys.backward) {
+      // S key moves backward (toward player's goal)
+      direction.current.z = 1;
+      if (frameCount.current % 60 === 0) console.log("Moving BACKWARD using S or ↓");
+    }
+    
     // Check if character is on ground for jumping
     isOnGroundRef.current = playerBody.position.y < 0.6;
     
@@ -103,10 +118,12 @@ const PlayerController = ({ character }: { character: string }) => {
     if (direction.current.length() > 0) {
       // IMPORTANT: For extremely responsive movement, we use direct velocity manipulation
       // with a bit of inertia to avoid abrupt stops and starts
-      const desiredVelocity = direction.current.x * 10; // Target velocity 
+      const desiredVelocityX = direction.current.x * 10; // Target velocity for X-axis
+      const desiredVelocityZ = direction.current.z * 8;  // Target velocity for Z-axis (forward/backward)
       
       // Blend current and desired velocity (smaller first number = more responsive)
-      playerBody.velocity.x = playerBody.velocity.x * 0.2 + desiredVelocity * 0.8;
+      playerBody.velocity.x = playerBody.velocity.x * 0.2 + desiredVelocityX * 0.8;
+      playerBody.velocity.z = playerBody.velocity.z * 0.2 + desiredVelocityZ * 0.8;
       
       // Also apply force for additional acceleration
       const force = new Vector3()
@@ -114,10 +131,16 @@ const PlayerController = ({ character }: { character: string }) => {
         .normalize()
         .multiplyScalar(moveSpeed * playerBody.mass * delta * 60);
       
-      applyForce(playerBody, [force.x, 0, 0]);
+      applyForce(playerBody, [force.x, 0, force.z]);
+      
+      // Log player position for debugging
+      if (frameCount.current % 60 === 0) {
+        console.log("Player position:", playerBody.position);
+      }
     } else {
       // Apply strong damping when not pressing movement keys for tight stops
-      playerBody.velocity.x *= 0.7; 
+      playerBody.velocity.x *= 0.7;
+      playerBody.velocity.z *= 0.7; 
     }
     
     // Jump (only when on ground)

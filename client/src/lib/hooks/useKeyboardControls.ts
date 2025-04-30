@@ -2,11 +2,13 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 
 // Controls interface
 interface Controls {
-  left: boolean;
-  right: boolean;
-  jump: boolean;
-  kick: boolean;
-  ability: boolean;
+  left: boolean;     // A or Left Arrow
+  right: boolean;    // D or Right Arrow
+  jump: boolean;     // W or Up Arrow (jumping and moving forward)
+  kick: boolean;     // Space (kick ball)
+  ability: boolean;  // E or Shift (use character ability)
+  forward: boolean;  // W or Up Arrow (dedicated forward movement)
+  backward: boolean; // S or Down Arrow (backward movement)
 }
 
 // Custom hook to handle keyboard controls
@@ -17,7 +19,9 @@ export function useKeyboardControls() {
     right: false,
     jump: false,
     kick: false,
-    ability: false
+    ability: false,
+    forward: false,
+    backward: false
   });
 
   // Using a ref for latest key state to avoid closure issues
@@ -61,9 +65,19 @@ export function useKeyboardControls() {
       case 'KeyW':
         // Update both state and ref immediately
         keysRef.current.jump = true;
+        keysRef.current.forward = true;
         setKeys(prev => {
-          console.log('Jump key down (W or ↑)');
-          return { ...prev, jump: true };
+          console.log('W key down - Jump AND forward movement');
+          return { ...prev, jump: true, forward: true };
+        });
+        break;
+      case 'ArrowDown':  
+      case 'KeyS':
+        // Update both state and ref immediately
+        keysRef.current.backward = true;
+        setKeys(prev => {
+          console.log('S key down - Backward movement');
+          return { ...prev, backward: true };
         });
         break;
       case 'Space':
@@ -108,7 +122,14 @@ export function useKeyboardControls() {
       case 'KeyW':
         // Update both state and ref immediately
         keysRef.current.jump = false;
-        setKeys(prev => ({ ...prev, jump: false }));
+        keysRef.current.forward = false;
+        setKeys(prev => ({ ...prev, jump: false, forward: false }));
+        break;
+      case 'ArrowDown':
+      case 'KeyS':
+        // Update both state and ref immediately
+        keysRef.current.backward = false;
+        setKeys(prev => ({ ...prev, backward: false }));
         break;
       case 'Space':
         // Update both state and ref immediately
@@ -139,7 +160,9 @@ export function useKeyboardControls() {
         right: false,
         jump: false,
         kick: false,
-        ability: false
+        ability: false,
+        forward: false,
+        backward: false
       });
     };
     
