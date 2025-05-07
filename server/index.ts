@@ -1,9 +1,17 @@
 import express, { type Request, Response, NextFunction } from "express";
+import path from "path";
+import { fileURLToPath } from "url";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
 import { setupWebSocketServer } from "./websocket";
+import { setupVite, serveStatic, log } from "./vite";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
+const port = process.env.PORT || 5000;
+
+// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -37,9 +45,22 @@ app.use((req, res, next) => {
   next();
 });
 
+// Serve static files from the client build directory
+app.use(express.static(path.join(__dirname, "../client/dist")));
+
+// For any other requests, send the index.html file
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "../client/dist/index.html"));
+});
+
+// API routes - using registerRoutes function
 (async () => {
   const server = await registerRoutes(app);
   
+  server.listen(port, () => {
+    log(`Server running on port ${port}`);
+  });
+
   // Setup WebSocket server for multiplayer functionality
   setupWebSocketServer(server);
 
@@ -59,15 +80,4 @@ app.use((req, res, next) => {
   } else {
     serveStatic(app);
   }
-
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client
-  const port = 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-  });
 })();

@@ -150,8 +150,8 @@ const GameScreen = () => {
           <Effects />
         </Suspense>
         
-        {/* Development camera controls - disable in production */}
-        {process.env.NODE_ENV === 'development' && <OrbitControls />}
+        {/* Camera controls - now enabled in all environments */}
+        <OrbitControls />
       </Canvas>
       
       {/* Game UI overlay */}
