@@ -1,0 +1,10 @@
+[build]
+  base = "client"
+  publish = "dist"
+  command = "npm run build"
+
+# Handle client-side routing for SPA
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
