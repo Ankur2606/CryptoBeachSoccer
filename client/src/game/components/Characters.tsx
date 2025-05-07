@@ -27,7 +27,7 @@ const Characters = () => {
       {/* AI character - always use Bitcoin for AI opponent */}
       <Character 
         type="ai" 
-        characterId="bitcoin" 
+        characterId="beachbaddy" 
         position={[0, 0, -8]} 
         isAbilityActive={false}
         score={aiScore}
