@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Trophy, VolumeX, Volume2, TrendingUp, Coins, Zap, ArrowUp, RefreshCw } from 'lucide-react';
 import { characterData } from '../models/character';
 import { AbilityType } from '../components/Abilities';
-import { websocketService } from '@/lib/multiplayer/websocketService';
+import websocketService from '@/lib/multiplayer/websocketService';
 
 // Crypto-themed puns and memes for random display
 const CRYPTO_PUNS = [

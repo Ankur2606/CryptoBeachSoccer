@@ -1,492 +1,507 @@
-import { WebSocket, WebSocketServer } from 'ws';
-import { Server } from 'http';
-import { log } from './vite';
+import { Server } from "http";
+import { v4 as uuidv4 } from "uuid";
+import { WebSocketServer, WebSocket } from "ws";
 
-// Define message types for game communication
-interface GameMessage {
-  type: string;
+// WebSocket message types
+type MessageType =
+  | "create-room"
+  | "join-room"
+  | "room-created"
+  | "room-joined"
+  | "player-joined"
+  | "player-left"
+  | "set-ready"
+  | "player-ready-update"
+  | "ready-acknowledged"
+  | "game-start"
+  | "game-update"
+  | "position-update"
+  | "game-reset"
+  | "game-restart"
+  | "error"
+  | "select-character"
+  | "character-selected"
+  | "character-selection-confirmed";
+
+// WebSocket message interface
+interface WebSocketMessage {
+  type: MessageType;
   data: any;
 }
 
-// Track connected players and game rooms
+// Extended Player interface with character selection
 interface Player {
-  id: string;
   name: string;
-  socket: WebSocket;
-  room?: string;
-  pendingJoin?: string; // Track pending join attempts
+  ws: WebSocket;
+  ready: boolean;
+  character?: string; // Selected character ID
 }
 
-interface GameRoom {
+// Game room interface
+interface Room {
   id: string;
-  host: string;
-  guest?: string;
-  hostReady: boolean;
-  guestReady: boolean;
-  gameInProgress: boolean; // Track if a game is currently being played
+  host: Player;
+  guest?: Player;
+  lastActivity: number;
+  gameStatus: 'waiting' | 'in_progress' | 'completed';
 }
 
-// Maintain state
-const players: Map<string, Player> = new Map();
-const rooms: Map<string, GameRoom> = new Map();
+// Active rooms
+const rooms = new Map<string, Room>();
 
-// Generate a random ID
-const generateId = (): string => {
-  return Math.random().toString(36).substring(2, 9);
-};
-
-// Setup WebSocket server
+// Set up WebSocket server
 export function setupWebSocketServer(server: Server) {
-  // Use a specific path to avoid conflicts with Vite's WebSocket server
-  const wss = new WebSocketServer({ 
-    server,
-    path: '/ws/game'  // This path will be used for game WebSocket connections
-  });
-  
-  log('WebSocket server initialized on path /ws/game', 'websocket');
-  
-  wss.on('connection', (socket: WebSocket) => {
-    // Assign a unique ID to each player
-    const playerId = generateId();
-    
-    // Initialize the player without a name yet
-    players.set(playerId, {
-      id: playerId,
-      name: `Player-${playerId}`,
-      socket: socket
+  const wss = new WebSocketServer({ server, path: "/ws" });
+
+  // Clean up inactive rooms periodically (every 5 minutes)
+  setInterval(() => {
+    const now = Date.now();
+    rooms.forEach((room, id) => {
+      const inactiveTime = now - room.lastActivity;
+      // If room inactive for more than 30 minutes, remove it
+      if (inactiveTime > 30 * 60 * 1000) {
+        console.log(`Room ${id} inactive for ${Math.round(inactiveTime / 1000 / 60)} minutes. Removing.`);
+        rooms.delete(id);
+      }
     });
-    
-    log(`Player ${playerId} connected`, 'websocket');
-    
-    // Send the player their ID
-    send(socket, {
-      type: 'connected',
-      data: { id: playerId }
-    });
-    
-    // Handle incoming messages
-    socket.on('message', (message: string) => {
+  }, 5 * 60 * 1000);
+
+  wss.on("connection", (ws) => {
+    console.log("WebSocket client connected");
+
+    // Handle messages from clients
+    ws.on("message", (messageData) => {
       try {
-        const parsedMessage: GameMessage = JSON.parse(message.toString());
-        handleMessage(playerId, parsedMessage);
+        const message: WebSocketMessage = JSON.parse(messageData.toString());
+        handleMessage(ws, message);
       } catch (error) {
-        log(`Error parsing message: ${error}`, 'websocket');
+        console.error("Error parsing WebSocket message:", error);
       }
     });
-    
-    // Handle disconnections
-    socket.on('close', () => {
-      log(`Player ${playerId} disconnected`, 'websocket');
-      
-      // Get the player
-      const player = players.get(playerId);
-      
-      // If the player was in a room, notify the other player
-      if (player && player.room) {
-        const room = rooms.get(player.room);
-        
-        if (room) {
-          // Notify the other player
-          if (room.host === playerId && room.guest) {
-            const guestPlayer = players.get(room.guest);
-            if (guestPlayer) {
-              send(guestPlayer.socket, {
-                type: 'player-left',
-                data: { message: 'Host left the game' }
-              });
-            }
-          } else if (room.guest === playerId) {
-            const hostPlayer = players.get(room.host);
-            if (hostPlayer) {
-              send(hostPlayer.socket, {
-                type: 'player-left',
-                data: { message: 'Guest left the game' }
-              });
-            }
-            
-            // If guest leaves, clear the guest from the room but keep the room
-            room.guest = undefined;
-            room.guestReady = false;
-          }
-          
-          // If host leaves, remove the room completely
-          if (room.host === playerId) {
-            rooms.delete(player.room);
-          }
-        }
-      }
-      
-      // Also clear any pending join attempts
-      if (player && player.pendingJoin) {
-        const pendingRoom = rooms.get(player.pendingJoin);
-        if (pendingRoom) {
-          // If this player was attempting to join as guest, clear the pending state
-          if (pendingRoom.guest === playerId) {
-            pendingRoom.guest = undefined;
-            pendingRoom.guestReady = false;
-          }
-        }
-      }
-      
-      // Remove the player
-      players.delete(playerId);
+
+    // Handle client disconnection
+    ws.on("close", () => {
+      handlePlayerDisconnect(ws);
     });
   });
-  
-  // Send a message to a client
-  function send(socket: WebSocket, message: GameMessage) {
-    if (socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify(message));
+}
+
+// Handle player disconnection
+function handlePlayerDisconnect(ws: WebSocket) {
+  // Find room where this player is
+  rooms.forEach((room, roomId) => {
+    // If player is host
+    if (room.host.ws === ws) {
+      // Notify guest if exists
+      if (room.guest) {
+        sendMessage(room.guest.ws, "player-left", {
+          message: "Host left the game",
+        });
+      }
+      // Remove room
+      rooms.delete(roomId);
+      console.log(`Host left, room ${roomId} removed`);
+    } 
+    // If player is guest
+    else if (room.guest && room.guest.ws === ws) {
+      // Notify host
+      sendMessage(room.host.ws, "player-left", {
+        message: "Guest left the game",
+      });
+      // Remove guest from room
+      delete room.guest;
+      room.lastActivity = Date.now();
+      console.log(`Guest left room ${roomId}`);
     }
+  });
+}
+
+// Handle incoming messages
+function handleMessage(ws: WebSocket, message: WebSocketMessage) {
+  console.log(`Received message: ${message.type}`, message.data);
+
+  switch (message.type) {
+    case "create-room":
+      handleCreateRoom(ws, message.data);
+      break;
+    case "join-room":
+      handleJoinRoom(ws, message.data);
+      break;
+    case "set-ready":
+      handleSetReady(ws, message.data);
+      break;
+    case "game-update":
+      handleGameUpdate(ws, message.data);
+      break;
+    case "position-update":
+      handlePositionUpdate(ws, message.data);
+      break;
+    case "game-reset":
+      handleGameReset(ws, message.data);
+      break;
+    case "game-restart":
+      handleGameRestart(ws, message.data);
+      break;
+    case "select-character":
+      handleCharacterSelect(ws, message.data);
+      break;
+    default:
+      console.warn("Unknown message type:", message.type);
   }
-  
-  // Handle incoming messages
-  function handleMessage(playerId: string, message: GameMessage) {
-    const player = players.get(playerId);
+}
+
+// Create a new game room
+function handleCreateRoom(ws: WebSocket, data: any) {
+  // Check if name is provided
+  if (!data.name) {
+    return sendMessage(ws, "error", { message: "Name is required" });
+  }
+
+  // If rejoining, check if room exists and host left
+  if (data.roomId && rooms.has(data.roomId)) {
+    const room = rooms.get(data.roomId)!;
     
-    if (!player) {
-      log(`Player ${playerId} not found`, 'websocket');
+    // If host reconnecting
+    if (!room.host || room.host.ws.readyState === WebSocket.CLOSED) {
+      // Update host info
+      room.host = {
+        name: data.name,
+        ws,
+        ready: false,
+        character: room.host?.character // Preserve character selection
+      };
+      room.lastActivity = Date.now();
+      
+      // Notify host that room is created
+      sendMessage(ws, "room-created", {
+        roomId: room.id,
+      });
+      
+      // If guest exists and still connected
+      if (room.guest && room.guest.ws.readyState === WebSocket.OPEN) {
+        // Notify host about guest
+        sendMessage(ws, "player-joined", {
+          guest: room.guest.name,
+          characterSelected: room.guest.character
+        });
+        
+        // Notify guest about host reconnecting
+        sendMessage(room.guest.ws, "player-joined", {
+          guest: room.host.name,
+          characterSelected: room.host.character
+        });
+      }
+      
+      console.log(`Host reconnected to room ${room.id}`);
       return;
     }
+  }
+
+  // Generate unique room ID
+  const roomId = data.roomId || generateRoomId();
+
+  // Create new room
+  rooms.set(roomId, {
+    id: roomId,
+    host: {
+      name: data.name,
+      ws,
+      ready: false
+    },
+    lastActivity: Date.now(),
+    gameStatus: 'waiting'
+  });
+
+  // Notify client that room is created
+  sendMessage(ws, "room-created", {
+    roomId,
+  });
+
+  console.log(`Room ${roomId} created by ${data.name}`);
+}
+
+// Join an existing game room
+function handleJoinRoom(ws: WebSocket, data: any) {
+  // Check if name and roomId are provided
+  if (!data.name || !data.roomId) {
+    return sendMessage(ws, "error", { message: "Name and Room ID are required" });
+  }
+
+  // Check if room exists
+  if (!rooms.has(data.roomId)) {
+    return sendMessage(ws, "error", { message: "Room not found" });
+  }
+
+  const room = rooms.get(data.roomId)!;
+  
+  // Check if guest slot is available
+  if (room.guest && room.guest.ws.readyState === WebSocket.OPEN) {
+    return sendMessage(ws, "error", { message: "Room is full" });
+  }
+
+  // Update last activity
+  room.lastActivity = Date.now();
+
+  // If guest is reconnecting
+  const isReconnect = room.guest && room.guest.ws.readyState !== WebSocket.OPEN;
+  
+  // Add guest to room (or update if reconnecting)
+  room.guest = {
+    name: data.name,
+    ws,
+    ready: false,
+    character: isReconnect ? room.guest?.character : undefined
+  };
+
+  // Notify guest that they've joined the room
+  sendMessage(ws, "room-joined", {
+    roomId: room.id,
+    host: room.host.name,
+    characterSelected: room.host.character
+  });
+
+  // Notify host that guest has joined
+  sendMessage(room.host.ws, "player-joined", {
+    guest: room.guest.name,
+    characterSelected: room.guest.character
+  });
+
+  console.log(`${data.name} joined room ${data.roomId}${isReconnect ? " (reconnected)" : ""}`);
+}
+
+// Player sets ready status
+function handleSetReady(ws: WebSocket, data: any) {
+  // Find room where this player is
+  const room = findRoomByPlayer(ws);
+  if (!room) {
+    return sendMessage(ws, "error", { message: "Room not found" });
+  }
+
+  // Update last activity
+  room.lastActivity = Date.now();
+
+  // Determine if player is host or guest
+  const isHost = room.host.ws === ws;
+  const player = isHost ? room.host : room.guest;
+
+  // Set player as ready
+  if (player) {
+    player.ready = true;
+  }
+
+  // Acknowledge ready status
+  sendMessage(ws, "ready-acknowledged", { 
+    hostReady: room.host.ready, 
+    guestReady: room.guest?.ready || false 
+  });
+
+  // Notify other player
+  const otherPlayer = isHost ? room.guest : room.host;
+  if (otherPlayer) {
+    sendMessage(otherPlayer.ws, "player-ready-update", { 
+      hostReady: room.host.ready, 
+      guestReady: room.guest?.ready || false 
+    });
+  }
+
+  // Check if both players are ready
+  if (room.host.ready && room.guest && room.guest.ready) {
+    // Set game status to in progress
+    room.gameStatus = 'in_progress';
     
-    switch (message.type) {
-      case 'set-name':
-        // Update player name
-        player.name = message.data.name || `Player-${playerId}`;
-        log(`Player ${playerId} set name to ${player.name}`, 'websocket');
-        break;
-        
-      case 'create-room':
-        // Create a new game room
-        const roomId = generateId();
-        rooms.set(roomId, {
-          id: roomId,
-          host: playerId,
-          hostReady: false,
-          guestReady: false,
-          gameInProgress: false
-        });
-        
-        // Associate the player with the room
-        player.room = roomId;
-        
-        // Send the room code back to the player
-        send(player.socket, {
-          type: 'room-created',
-          data: { roomId, name: player.name }
-        });
-        
-        log(`Player ${player.name} created room ${roomId}`, 'websocket');
-        break;
-        
-      case 'join-room':
-        // Join an existing game room
-        const room = rooms.get(message.data.roomId);
-        
-        if (!room) {
-          send(player.socket, {
-            type: 'error',
-            data: { message: 'Room not found' }
-          });
-          return;
-        }
-        
-        // Special case: If the player is already in this room as the host, don't allow them to join as guest
-        if (room.host === playerId) {
-          send(player.socket, {
-            type: 'error',
-            data: { message: 'You are already the host of this room' }
-          });
-          return;
-        }
-        
-        // Track that this player is attempting to join the room
-        player.pendingJoin = room.id;
-        
-        // If there's already a guest in the room, handle different cases
-        if (room.guest) {
-          // Case 1: The player was previously the guest and is trying to rejoin
-          // (common after brief disconnects or page refreshes)
-          const existingGuest = players.get(room.guest);
-          
-          // If the current guest isn't connected, allow this player to take over
-          if (!existingGuest || existingGuest.socket.readyState !== WebSocket.OPEN) {
-            log(`Player ${player.name} rejoining as guest in room ${room.id} (replacing disconnected guest)`, 'websocket');
-            room.guest = playerId;
-            player.room = room.id;
-            
-            // Notify the host about the new guest
-            const hostPlayer = players.get(room.host);
-            if (hostPlayer) {
-              send(hostPlayer.socket, {
-                type: 'player-joined',
-                data: { 
-                  guest: player.name,
-                  guestId: playerId
-                }
-              });
-            }
-            
-            // Notify the guest that they've joined
-            send(player.socket, {
-              type: 'room-joined',
-              data: { 
-                roomId: room.id,
-                host: hostPlayer ? hostPlayer.name : 'Unknown',
-                hostId: room.host
-              }
-            });
-            
-            return;
-          }
-          
-          // If it's a different player trying to join, reject them
-          send(player.socket, {
-            type: 'error',
-            data: { message: 'Room is full' }
-          });
-          return;
-        }
-        
-        // Add the player to the room as a guest
-        room.guest = playerId;
-        player.room = room.id;
-        
-        // Notify the host
-        const hostPlayer = players.get(room.host);
-        if (hostPlayer) {
-          send(hostPlayer.socket, {
-            type: 'player-joined',
-            data: { 
-              guest: player.name,
-              guestId: playerId
-            }
-          });
-        }
-        
-        // Notify the guest
-        send(player.socket, {
-          type: 'room-joined',
-          data: { 
-            roomId: room.id,
-            host: hostPlayer ? hostPlayer.name : 'Unknown',
-            hostId: room.host
-          }
-        });
-        
-        // Log the successful join
-        log(`Player ${player.name} joined room ${room.id} as guest`, 'websocket');
-        break;
-        
-      case 'player-ready':
-        // Set player ready state
-        if (!player.room) {
-          send(player.socket, {
-            type: 'error',
-            data: { message: 'You are not in a room' }
-          });
-          return;
-        }
-        
-        const playerRoom = rooms.get(player.room);
-        if (!playerRoom) {
-          send(player.socket, {
-            type: 'error',
-            data: { message: 'Room not found' }
-          });
-          return;
-        }
-        
-        // Make sure we have a guest before proceeding
-        if (!playerRoom.guest) {
-          send(player.socket, {
-            type: 'error',
-            data: { message: 'Waiting for another player to join' }
-          });
-          return;
-        }
-        
-        // Update ready state
-        if (playerRoom.host === playerId) {
-          playerRoom.hostReady = true;
-        } else if (playerRoom.guest === playerId) {
-          playerRoom.guestReady = true;
-        }
-        
-        // Acknowledgment to the player who marked themselves ready
-        send(player.socket, {
-          type: 'ready-acknowledged',
-          data: { 
-            success: true,
-            hostReady: playerRoom.hostReady,
-            guestReady: playerRoom.guestReady
-          }
-        });
-        
-        // Get both player objects
-        const host = players.get(playerRoom.host);
-        const guest = players.get(playerRoom.guest);
-        
-        if (!host || !guest) {
-          log(`Error: Missing players in room ${player.room}`, 'websocket');
-          return;
-        }
-        
-        // Notify the other player about the ready state change
-        if (playerRoom.host === playerId) {
-          send(guest.socket, {
-            type: 'player-ready-update',
-            data: { 
-              player: 'host',
-              ready: true,
-              hostReady: playerRoom.hostReady,
-              guestReady: playerRoom.guestReady
-            }
-          });
-        } else if (playerRoom.guest === playerId) {
-          send(host.socket, {
-            type: 'player-ready-update',
-            data: { 
-              player: 'guest',
-              ready: true,
-              hostReady: playerRoom.hostReady,
-              guestReady: playerRoom.guestReady
-            }
-          });
-        }
-        
-        // Check if both players are ready
-        if (playerRoom.hostReady && playerRoom.guestReady) {
-          // Mark the game as in progress
-          playerRoom.gameInProgress = true;
-          
-          // Start the game by notifying both players
-          send(host.socket, {
-            type: 'game-start',
-            data: {
-              hostName: host.name,
-              guestName: guest.name,
-              isHost: true
-            }
-          });
-          
-          send(guest.socket, {
-            type: 'game-start',
-            data: {
-              hostName: host.name,
-              guestName: guest.name,
-              isHost: false
-            }
-          });
-          
-          log(`Game starting in room ${player.room} between ${host.name} and ${guest.name}`, 'websocket');
-        }
-        
-        log(`Player ${player.name} is ready in room ${player.room}`, 'websocket');
-        break;
-        
-      case 'game-update':
-        // Forward game updates to the other player
-        if (!player.room) {
-          return;
-        }
-        
-        const gameRoom = rooms.get(player.room);
-        if (!gameRoom) {
-          return;
-        }
-        
-        // Forward to the other player
-        if (gameRoom.host === playerId && gameRoom.guest) {
-          const guestPlayer = players.get(gameRoom.guest);
-          if (guestPlayer) {
-            send(guestPlayer.socket, {
-              type: 'game-update',
-              data: message.data
-            });
-          }
-        } else if (gameRoom.guest === playerId) {
-          const hostPlayer = players.get(gameRoom.host);
-          if (hostPlayer) {
-            send(hostPlayer.socket, {
-              type: 'game-update',
-              data: message.data
-            });
-          }
-        }
-        break;
-        
-      case 'restart-game':
-        // Restart the game session
-        if (!player.room) {
-          send(player.socket, {
-            type: 'error',
-            data: { message: 'You are not in a room' }
-          });
-          return;
-        }
-        
-        const restartRoom = rooms.get(player.room);
-        if (!restartRoom) {
-          send(player.socket, {
-            type: 'error',
-            data: { message: 'Room not found' }
-          });
-          return;
-        }
-        
-        // Make sure we have both players before proceeding
-        if (!restartRoom.guest) {
-          send(player.socket, {
-            type: 'error',
-            data: { message: 'Cannot restart: waiting for another player to join' }
-          });
-          return;
-        }
-        
-        // Reset ready states and game status
-        restartRoom.hostReady = false;
-        restartRoom.guestReady = false;
-        restartRoom.gameInProgress = false;
-        
-        // Get both player objects
-        const restartHost = players.get(restartRoom.host);
-        const restartGuest = players.get(restartRoom.guest);
-        
-        if (!restartHost || !restartGuest) {
-          log(`Error: Missing players for restart in room ${player.room}`, 'websocket');
-          send(player.socket, {
-            type: 'error',
-            data: { message: 'Cannot restart: player disconnected' }
-          });
-          return;
-        }
-        
-        // Notify the host
-        send(restartHost.socket, {
-          type: 'game-restart',
-          data: { 
-            requestedBy: player.name,
-            hostName: restartHost.name,
-            guestName: restartGuest.name
-          }
-        });
-        
-        // Notify the guest
-        send(restartGuest.socket, {
-          type: 'game-restart',
-          data: { 
-            requestedBy: player.name,
-            hostName: restartHost.name,
-            guestName: restartGuest.name
-          }
-        });
-        
-        log(`Game restarted in room ${player.room} by ${player.name}`, 'websocket');
-        break;
-        
-      default:
-        log(`Unknown message type: ${message.type}`, 'websocket');
+    // Start the game
+    sendMessage(room.host.ws, "game-start", {
+      opponentName: room.guest.name,
+      opponentCharacter: room.guest.character
+    });
+    
+    sendMessage(room.guest.ws, "game-start", {
+      opponentName: room.host.name,
+      opponentCharacter: room.host.character
+    });
+    
+    console.log(`Game started in room ${room.id}`);
+  }
+}
+
+// Handle game updates
+function handleGameUpdate(ws: WebSocket, data: any) {
+  // Find room where this player is
+  const room = findRoomByPlayer(ws);
+  if (!room) return;
+
+  // Update last activity
+  room.lastActivity = Date.now();
+
+  // Forward game update to other player
+  const isHost = room.host.ws === ws;
+  const otherPlayer = isHost ? room.guest : room.host;
+
+  if (otherPlayer) {
+    sendMessage(otherPlayer.ws, "game-update", data);
+  }
+}
+
+// Handle real-time position updates (new feature)
+function handlePositionUpdate(ws: WebSocket, data: any) {
+  // Find room where this player is
+  const room = findRoomByPlayer(ws);
+  if (!room || room.gameStatus !== 'in_progress') return;
+
+  // No need to update last activity for frequent position updates
+  // to avoid unnecessary overhead
+  
+  // Forward position update to other player
+  const isHost = room.host.ws === ws;
+  const otherPlayer = isHost ? room.guest : room.host;
+
+  if (otherPlayer) {
+    sendMessage(otherPlayer.ws, "position-update", data);
+  }
+}
+
+// Handle game reset by host (new feature)
+function handleGameReset(ws: WebSocket, data: any) {
+  // Find room where this player is
+  const room = findRoomByPlayer(ws);
+  if (!room) return;
+
+  // Update last activity
+  room.lastActivity = Date.now();
+
+  // Only host can reset the game
+  if (room.host.ws !== ws) {
+    return sendMessage(ws, "error", { message: "Only the host can reset the game" });
+  }
+
+  // Reset ready states
+  room.host.ready = false;
+  if (room.guest) {
+    room.guest.ready = false;
+  }
+
+  // Change game status back to waiting
+  room.gameStatus = 'waiting';
+
+  // Notify both players about the reset
+  sendMessage(room.host.ws, "game-reset", {
+    hostName: room.host.name,
+    guestName: room.guest?.name || ''
+  });
+
+  if (room.guest) {
+    sendMessage(room.guest.ws, "game-reset", {
+      hostName: room.host.name,
+      guestName: room.guest.name
+    });
+  }
+
+  console.log(`Game reset in room ${room.id}`);
+}
+
+// Handle game restart request (can be from any player)
+function handleGameRestart(ws: WebSocket, data: any) {
+  // Find room where this player is
+  const room = findRoomByPlayer(ws);
+  if (!room) return;
+
+  // Update last activity
+  room.lastActivity = Date.now();
+
+  // Determine if player is host or guest
+  const isHost = room.host.ws === ws;
+  
+  // Reset ready states
+  room.host.ready = false;
+  if (room.guest) {
+    room.guest.ready = false;
+  }
+
+  // Change game status back to waiting
+  room.gameStatus = 'waiting';
+
+  // Notify both players about the restart
+  sendMessage(room.host.ws, "game-restart", {
+    hostName: room.host.name,
+    guestName: room.guest?.name || '',
+    requestedBy: isHost ? 'host' : 'guest'
+  });
+
+  if (room.guest) {
+    sendMessage(room.guest.ws, "game-restart", {
+      hostName: room.host.name,
+      guestName: room.guest.name,
+      requestedBy: isHost ? 'host' : 'guest'
+    });
+  }
+
+  console.log(`Game restart requested in room ${room.id} by ${isHost ? 'host' : 'guest'}`);
+}
+
+// Handle character selection (new feature)
+function handleCharacterSelect(ws: WebSocket, data: any) {
+  // Find room where this player is
+  const room = findRoomByPlayer(ws);
+  if (!room) return;
+
+  // Update last activity
+  room.lastActivity = Date.now();
+
+  // Check required data
+  if (!data.character) {
+    return sendMessage(ws, "error", { message: "Character ID is required" });
+  }
+
+  // Determine if player is host or guest
+  const isHost = room.host.ws === ws;
+  const player = isHost ? room.host : room.guest;
+  const otherPlayer = isHost ? room.guest : room.host;
+
+  // Update player's character
+  if (player) {
+    player.character = data.character;
+    
+    // Confirm selection to the player
+    sendMessage(ws, "character-selection-confirmed", {
+      success: true,
+      character: data.character
+    });
+    
+    // Notify the other player about the selection
+    if (otherPlayer) {
+      sendMessage(otherPlayer.ws, "character-selected", {
+        character: data.character,
+        isHost: isHost
+      });
+    }
+    
+    console.log(`Player ${player.name} selected character ${data.character} in room ${room.id}`);
+  }
+}
+
+// Helper function to find a room by player's WebSocket connection
+function findRoomByPlayer(ws: WebSocket): Room | undefined {
+  for (const room of rooms.values()) {
+    if (room.host.ws === ws || (room.guest && room.guest.ws === ws)) {
+      return room;
     }
   }
+  return undefined;
+}
+
+// Send a message to a client
+function sendMessage(ws: WebSocket, type: MessageType, data: any) {
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(
+      JSON.stringify({
+        type,
+        data,
+      })
+    );
+  }
+}
+
+// Generate a random room ID
+function generateRoomId(): string {
+  return Math.random().toString(36).substring(2, 8).toUpperCase();
 }

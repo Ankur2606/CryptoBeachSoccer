@@ -8,6 +8,7 @@ import { useGameState } from "@/lib/stores/useGameState";
 import { Vector3 } from "three";
 import { MOVE_SPEED, JUMP_FORCE, KICK_POWER } from "../constants";
 import { AbilityType } from "./Abilities";
+import websocketService from "@/lib/multiplayer/websocketService";
 
 // Player controller handles input and character movement
 const PlayerController = ({ character }: { character: string }) => {
@@ -15,7 +16,7 @@ const PlayerController = ({ character }: { character: string }) => {
   const { getBody, applyForce } = usePhysics();
   const { activateAbility, isAbilityActive, cooldownRemaining } = useCharacter();
   const { playHit, playSuccess } = useAudio();
-  const { gameState, resetGame } = useGameState();
+  const { gameState, resetGame, isMultiplayer } = useGameState();
   
   // Active crypto ability states
   const [activeAbility, setActiveAbility] = useState<AbilityType | null>(null);
@@ -35,6 +36,81 @@ const PlayerController = ({ character }: { character: string }) => {
   const frameCount = useRef(0);
   const abilityEffectRef = useRef<NodeJS.Timeout | null>(null);
   
+  // Store player position and rotation for multiplayer syncing
+  const lastPositionUpdateTime = useRef(0);
+  const positionUpdateInterval = 50; // milliseconds between position updates
+  const opponentPosition = useRef(new Vector3());
+  const opponentRotation = useRef(0);
+
+  useEffect(() => {
+    if (!isMultiplayer) return;
+
+    // Function to handle position updates from opponent
+    const handlePositionUpdate = (message: any) => {
+      if (!message.data) return;
+      
+      // Update opponent position and rotation
+      if (message.data.player) {
+        opponentPosition.current.set(
+          message.data.player.x,
+          message.data.player.y,
+          message.data.player.z
+        );
+        opponentRotation.current = message.data.player.rotation;
+      }
+      
+      // Update ball position and physics if we're not the host
+      // Host is the authority for ball physics
+      if (!websocketService.isRoomHost && message.data.ball) {
+        const ballBody = getBody('ball');
+        if (ballBody) {
+          // Set ball position
+          ballBody.position.set(
+            message.data.ball.x,
+            message.data.ball.y,
+            message.data.ball.z
+          );
+          
+          // Set ball velocity if provided
+          if (message.data.ball.velocityX !== undefined) {
+            ballBody.velocity.set(
+              message.data.ball.velocityX,
+              message.data.ball.velocityY || 0,
+              message.data.ball.velocityZ || 0
+            );
+          }
+          
+          // Set angular velocity if provided
+          if (message.data.ball.angularVelocityX !== undefined) {
+            ballBody.angularVelocity.set(
+              message.data.ball.angularVelocityX,
+              message.data.ball.angularVelocityY || 0,
+              message.data.ball.angularVelocityZ || 0
+            );
+          }
+        }
+      }
+    };
+
+    // Register position update handler
+    websocketService.on('position-update', handlePositionUpdate);
+    
+    // Function to handle game reset messages from websocket
+    const handleGameReset = (message: any) => {
+      console.log('🔄 Game reset received from host:', message);
+      resetGame();
+      playSuccess(); // Play sound for reset feedback
+    };
+    
+    // Listen for game reset events
+    websocketService.on('game-reset', handleGameReset);
+    
+    return () => {
+      websocketService.off('position-update', handlePositionUpdate);
+      websocketService.off('game-reset', handleGameReset);
+    };
+  }, [isMultiplayer, resetGame, playSuccess, getBody]);
+
   // Log when component mounts and set up ability listeners
   useEffect(() => {
     console.log("PlayerController mounted for character:", character);
@@ -44,6 +120,20 @@ const PlayerController = ({ character }: { character: string }) => {
       // Add R key as game restart
       if (e.code === 'KeyR') {
         console.log("🔄 R key pressed - restarting game");
+        
+        // In multiplayer mode, only the host can trigger a reset
+        if (isMultiplayer) {
+          if (websocketService.isHost) {
+            console.log("Host restarting game via WebSocket");
+            websocketService.resetGame();
+          } else {
+            console.log("Only the host can restart the multiplayer game");
+            // Could show a message to the player here
+            return;
+          }
+        }
+        
+        // Always reset the game locally (in singleplayer, or if we're the host)
         resetGame();
       }
       
@@ -80,7 +170,7 @@ const PlayerController = ({ character }: { character: string }) => {
         clearTimeout(abilityEffectRef.current);
       }
     };
-  }, [character, playSuccess, resetGame]);
+  }, [character, playSuccess, resetGame, isMultiplayer]);
   
   // Apply the specific crypto ability effect - significantly enhanced
   const applyAbilityEffect = (type: AbilityType, duration: number) => {
@@ -166,6 +256,47 @@ const PlayerController = ({ character }: { character: string }) => {
     if (!playerBody) {
       console.log("Player body not found");
       return;
+    }
+    
+    // Track player position and rotation for multiplayer
+    if (isMultiplayer) {
+      const currentTime = performance.now();
+      // Send position updates at regular intervals
+      if (currentTime - lastPositionUpdateTime.current > positionUpdateInterval) {
+        lastPositionUpdateTime.current = currentTime;
+        
+        // Get the ball data for synchronization
+        const ballBody = getBody('ball');
+        const ballData = ballBody ? {
+          x: ballBody.position.x,
+          y: ballBody.position.y,
+          z: ballBody.position.z,
+          velocityX: ballBody.velocity.x,
+          velocityY: ballBody.velocity.y,
+          velocityZ: ballBody.velocity.z,
+          angularVelocityX: ballBody.angularVelocity.x,
+          angularVelocityY: ballBody.angularVelocity.y,
+          angularVelocityZ: ballBody.angularVelocity.z
+        } : undefined;
+        
+        // Calculate player rotation from velocity
+        const playerRotation = Math.atan2(
+          playerBody.velocity.x, 
+          playerBody.velocity.z
+        );
+        
+        // Send position update through websocket
+        websocketService.sendPositionUpdate({
+          player: {
+            x: playerBody.position.x,
+            y: playerBody.position.y,
+            z: playerBody.position.z,
+            rotation: playerRotation
+          },
+          // Only host sends ball data to maintain consistency
+          ball: websocketService.isRoomHost ? ballData : undefined
+        });
+      }
     }
     
     // Get current key states
