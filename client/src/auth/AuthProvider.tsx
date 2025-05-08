@@ -16,7 +16,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   return (
     <BedrockPassportProvider
       baseUrl="https://api.bedrockpassport.com"
-      authCallbackUrl="http://localhost:3000/auth/callback" // Update this with your production URL when deployed
+      authCallbackUrl="https://https://crypto-beach-soccer.netlify.app/auth/callback" // Update this with your production URL when deployed
       tenantId="orange-qrh9yonw24" // Replace with your actual tenant ID from Orange ID
     >
       {children}
