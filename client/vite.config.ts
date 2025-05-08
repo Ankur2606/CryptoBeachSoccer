@@ -28,6 +28,9 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, "../dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      external: ['@bedrock_org/passport']
+    }
   },
   // Add proxy configuration to forward API requests to the backend server
   server: {
