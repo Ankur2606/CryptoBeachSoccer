@@ -16,6 +16,8 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "src"),
       "@shared": path.resolve(__dirname, "../shared"),
+      // Add a browser-compatible EventEmitter implementation
+      'events': 'eventemitter3'
     },
   },
   css: {
